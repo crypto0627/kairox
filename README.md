@@ -161,7 +161,7 @@ The draw loop stops while the tab is hidden; the sockets do not, so coming
 back shows current prices rather than a scene catching up. Anything that
 integrates a frame delta clamps it, because the first frame back otherwise
 carries however long you were away. `prefers-reduced-motion` removes the rain
-and stands the supervisor still.
+and the cursor sparks, and stands the supervisor still.
 
 ## Architecture notes
 

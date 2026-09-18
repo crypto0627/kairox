@@ -10,6 +10,7 @@ import { ScreenArray } from "./ScreenArray";
 import { Room } from "./Room";
 import { Interior } from "./Interior";
 import { Supervisor } from "./Supervisor";
+import { CursorMagic } from "./CursorMagic";
 import { CityScape } from "./CityScape";
 import { Rain } from "./Rain";
 import { Effects } from "./Effects";
@@ -122,6 +123,8 @@ export function Scene() {
           rotation={seat.rotation}
         />
       ))}
+
+      <CursorMagic />
 
       <Effects />
 
