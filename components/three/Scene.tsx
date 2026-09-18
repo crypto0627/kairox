@@ -8,8 +8,10 @@ import { Vector3 } from "three";
 import { Workstation } from "./Workstation";
 import { ScreenArray } from "./ScreenArray";
 import { Room } from "./Room";
+import { Interior } from "./Interior";
 import { CityScape } from "./CityScape";
 import { Rain } from "./Rain";
+import { Effects } from "./Effects";
 import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
 
@@ -62,22 +64,45 @@ export function Scene() {
           city. The room gets its atmosphere from the neon instead. */}
       <fogExp2 attach="fog" args={["#070a16", 0.0062]} />
 
-      <hemisphereLight args={["#1b2a44", "#05060b", 0.35]} />
-      <ambientLight intensity={0.12} />
+      {/* --- lighting rig ---
+          Night City reads warm against cold: sodium spill off the street
+          coming in through the glass, cyan and magenta from the room's own
+          signage. Every source here is deliberately weak — the emissive
+          surfaces carry the scene and Bloom spends them. */}
+      <hemisphereLight args={["#1b2a44", "#140b16", 0.28]} />
+      <ambientLight intensity={0.1} />
+
+      {/* key: the city itself, raking in through the window */}
       <directionalLight
-        position={[-6, 9, 6]}
-        intensity={0.45}
-        color="#4a7fff"
+        position={[-5, 13, -15]}
+        intensity={0.55}
+        color="#5b86ff"
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-near={1}
+        shadow-camera-far={44}
+        shadow-camera-left={-18}
+        shadow-camera-right={18}
+        shadow-camera-top={15}
+        shadow-camera-bottom={-5}
+        shadow-bias={-0.0012}
       />
-      <pointLight position={[0, 5.2, 1]} intensity={14} distance={16} color="#00e5ff" />
-      <pointLight position={[5.5, 1.6, 2]} intensity={9} distance={12} color="#ff2e88" />
-      <pointLight position={[-5.5, 1.6, 2]} intensity={7} distance={12} color="#8b5cf6" />
+
+      {/* the warm half of the contrast: street light pooling at the glass */}
+      <pointLight position={[0, 1.5, -10.5]} intensity={30} distance={24} decay={2} color="#ff9436" />
+      <pointLight position={[-9, 2.4, -11]} intensity={14} distance={16} decay={2} color="#ffb056" />
+
+      {/* the screen array spilling down onto the floor and the traders */}
+      <pointLight position={[0, 4.1, -3.4]} intensity={24} distance={17} decay={2} color="#00e5ff" />
+
+      {/* room accents */}
+      <pointLight position={[8, 1.9, 1.5]} intensity={13} distance={14} decay={2} color="#ff2e88" />
+      <pointLight position={[-8, 1.9, 1.5]} intensity={11} distance={14} decay={2} color="#8b5cf6" />
 
       <CityScape />
       <Rain />
       <Room />
+      <Interior />
 
       <ScreenArray />
 
@@ -91,6 +116,8 @@ export function Scene() {
           rotation={seat.rotation}
         />
       ))}
+
+      <Effects />
 
       <OrbitControls
         makeDefault

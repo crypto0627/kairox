@@ -1,14 +1,25 @@
 "use client";
 
-import { useRef, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
-import { Color, type Group, type Mesh, type MeshBasicMaterial } from "three";
+import { useGLTF } from "@react-three/drei";
+import {
+  AnimationClip,
+  AnimationMixer,
+  Color,
+  type Group,
+  type Mesh,
+  type MeshStandardMaterial,
+} from "three";
+import { SkeletonUtils } from "three-stdlib";
+
+const MODEL = "/models/robot-trader.glb";
+useGLTF.preload(MODEL);
 
 export interface RobotTraderProps {
-  /** Per-seat 0..1 value: varies pose, animation phase and typing speed. */
+  /** Per-seat 0..1 value: varies animation phase and reaction speed. */
   seed: number;
-  /** Which instrument drives this seat's visor colour. */
+  /** Which instrument drives this seat's glow. */
   symbolId: string;
   /**
    * Live sentiment by symbol id, written outside React render. Read only
@@ -17,116 +28,129 @@ export interface RobotTraderProps {
   sentimentRef: RefObject<Record<string, number>>;
 }
 
-const UP = new Color("#00e5ff");
+const UP = new Color("#00e5b0");
 const DOWN = new Color("#ff2e88");
-const CHASSIS = "#0e1520";
 
 /**
- * Procedural placeholder robot — the Phase 1 stand-in.
+ * Material map for the source rig, which ships three: "Main" is the large
+ * body panelling, "Grey" the structural frame, and "Black" the face — a small
+ * plate on the head, which is exactly the surface that should carry the
+ * instrument's colour.
  *
- * Phase 5 swaps the body for a Mixamo GLTF behind these exact props:
- * useGLTF + SkeletonUtils.clone() + useAnimations, with `seed` driving
- * mixer.timeScale and mixer.setTime() so the five seats desync.
+ * Main keeps a worn amber rather than going teal like everything else. The
+ * room is cyan and magenta throughout, and Night City's signature is warm
+ * against cold; five amber chassis are what stops the floor reading as a
+ * single blue wash.
+ */
+const CHASSIS = new Color("#8a4418");
+const FRAME = new Color("#1b2330");
+const VISOR_BASE = new Color("#05070b");
+
+/** Measured on screen: the rig is ~4.4 units tall, so this lands it at 1.85. */
+const SCALE = 0.42;
+const CLIP = "Idle";
+
+interface Rig {
+  mixer: AnimationMixer;
+  glow: MeshStandardMaterial[];
+}
+
+/**
+ * One robot trader: the CC0 RobotExpressive rig, re-skinned to the room's
+ * palette and paced by its instrument.
+ *
+ * It faces −z, into its console and the screen array beyond, so the camera
+ * sees its back. That is both the shot we want and what fixes the occlusion:
+ * the desk and monitor now sit *behind* the body rather than in front of it,
+ * where they used to hide everything but a floating visor.
+ *
+ * The rig is built and driven imperatively. A skinned clone, its mixer and
+ * its materials are external state that React should not own, and keeping
+ * them in a ref means a price tick costs a lerp rather than a re-render.
  */
 export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) {
-  const root = useRef<Group>(null);
-  const head = useRef<Group>(null);
-  const leftHand = useRef<Mesh>(null);
-  const rightHand = useRef<Mesh>(null);
-  const visor = useRef<MeshBasicMaterial>(null);
-  const vent = useRef<MeshBasicMaterial>(null);
+  const host = useRef<Group>(null);
+  const rig = useRef<Rig | null>(null);
+  const { scene, animations } = useGLTF(MODEL);
 
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime + seed * 7;
+  useEffect(() => {
+    const parent = host.current;
+    if (!parent) return;
 
-    if (root.current) root.current.position.y = Math.sin(t * 0.7) * 0.012;
+    // SkeletonUtils.clone is the only clone that carries bones and skinned
+    // meshes correctly — Object3D.clone() shares the skeleton, and all five
+    // seats would then animate as a single puppet.
+    const model = SkeletonUtils.clone(scene) as Group;
+    const glow: MeshStandardMaterial[] = [];
 
-    if (head.current) {
-      head.current.rotation.y = Math.sin(t * 0.35) * 0.18;
-      head.current.rotation.x = Math.sin(t * 0.5 + 1.2) * 0.05;
+    model.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      // Source materials are shared, so clone before tinting; otherwise
+      // recolouring one seat recolours the whole row.
+      const material = (mesh.material as MeshStandardMaterial).clone();
+      material.emissive = new Color("#00e5b0");
+
+      if (material.name === "Black") {
+        // The face. Only this glows — lighting the body panels turned each
+        // robot into a featureless lamp once Bloom got hold of it.
+        material.color.copy(VISOR_BASE);
+        material.metalness = 0.2;
+        material.roughness = 0.25;
+        material.emissiveIntensity = 2.4;
+        glow.push(material);
+      } else if (material.name === "Main") {
+        material.color.copy(CHASSIS);
+        material.metalness = 0.74;
+        material.roughness = 0.44;
+        material.emissiveIntensity = 0;
+      } else {
+        material.color.copy(FRAME);
+        material.metalness = 0.88;
+        material.roughness = 0.3;
+        material.emissiveIntensity = 0;
+      }
+
+      mesh.material = material;
+    });
+
+    parent.add(model);
+
+    const mixer = new AnimationMixer(model);
+    const clip = AnimationClip.findByName(animations, CLIP);
+    if (clip) {
+      mixer.clipAction(clip).play();
+      // Desync the row: without this all five breathe in lockstep, which
+      // reads as one puppet copied five times.
+      mixer.setTime(seed * clip.duration);
     }
 
-    // Typing: hands alternate, phase-offset per seat, faster when the
-    // instrument is moving.
+    rig.current = { mixer, glow };
+
+    return () => {
+      rig.current = null;
+      mixer.stopAllAction();
+      mixer.uncacheRoot(model);
+      parent.remove(model);
+      for (const material of glow) material.dispose();
+    };
+  }, [scene, animations, seed]);
+
+  useFrame((_, delta) => {
+    const current = rig.current;
+    if (!current) return;
+
     const change = sentimentRef.current?.[symbolId] ?? 0;
-    const urgency = Math.min(1.6, 1 + Math.abs(change) * 0.25);
-    const rate = 6 * (0.9 + seed * 0.3) * urgency;
-    if (leftHand.current) {
-      leftHand.current.position.y = 0.02 + Math.abs(Math.sin(t * rate)) * 0.035;
-    }
-    if (rightHand.current) {
-      rightHand.current.position.y =
-        0.02 + Math.abs(Math.sin(t * rate + 1.6)) * 0.035;
-    }
+    // A moving instrument makes its trader restless.
+    const urgency = Math.min(1.9, 1 + Math.abs(change) * 0.35);
+    current.mixer.update(delta * (0.82 + seed * 0.34) * urgency);
 
     const tint = change < 0 ? DOWN : UP;
-    visor.current?.color.lerp(tint, 0.08);
-    vent.current?.color.lerp(tint, 0.08);
+    for (const material of current.glow) material.emissive.lerp(tint, 0.06);
   });
 
-  return (
-    <group ref={root}>
-      {/* torso */}
-      <RoundedBox
-        args={[0.46, 0.6, 0.3]}
-        radius={0.07}
-        smoothness={4}
-        position={[0, 1.05, 0]}
-        castShadow
-      >
-        <meshStandardMaterial color={CHASSIS} metalness={0.85} roughness={0.35} />
-      </RoundedBox>
-
-      {/* chest vent — emissive, Bloom will pick this up in Phase 5 */}
-      <mesh position={[0, 1.12, 0.152]}>
-        <planeGeometry args={[0.2, 0.05]} />
-        <meshBasicMaterial ref={vent} color="#00e5ff" toneMapped={false} />
-      </mesh>
-
-      {/* head */}
-      <group ref={head} position={[0, 1.48, 0]}>
-        <RoundedBox args={[0.3, 0.28, 0.28]} radius={0.09} smoothness={4} castShadow>
-          <meshStandardMaterial color={CHASSIS} metalness={0.9} roughness={0.25} />
-        </RoundedBox>
-        <mesh position={[0, 0.01, 0.142]}>
-          <planeGeometry args={[0.2, 0.07]} />
-          <meshBasicMaterial ref={visor} color="#00e5ff" toneMapped={false} />
-        </mesh>
-      </group>
-
-      {/* arms */}
-      {[-1, 1].map((side) => (
-        <group key={side} position={[side * 0.3, 1.2, 0]}>
-          <mesh rotation={[0, 0, side * 0.35]} castShadow>
-            <capsuleGeometry args={[0.055, 0.26, 4, 10]} />
-            <meshStandardMaterial color={CHASSIS} metalness={0.8} roughness={0.4} />
-          </mesh>
-          <mesh position={[side * 0.08, -0.26, 0.18]} rotation={[1.1, 0, 0]} castShadow>
-            <capsuleGeometry args={[0.048, 0.24, 4, 10]} />
-            <meshStandardMaterial color={CHASSIS} metalness={0.8} roughness={0.4} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* hands, on the keyboard */}
-      <mesh ref={leftHand} position={[-0.16, 0.02, 0.44]}>
-        <boxGeometry args={[0.1, 0.05, 0.11]} />
-        <meshStandardMaterial color={CHASSIS} metalness={0.7} roughness={0.5} />
-      </mesh>
-      <mesh ref={rightHand} position={[0.16, 0.02, 0.44]}>
-        <boxGeometry args={[0.1, 0.05, 0.11]} />
-        <meshStandardMaterial color={CHASSIS} metalness={0.7} roughness={0.5} />
-      </mesh>
-
-      {/* chair */}
-      <mesh position={[0, 0.42, -0.24]} castShadow>
-        <boxGeometry args={[0.5, 0.62, 0.08]} />
-        <meshStandardMaterial color="#080c12" metalness={0.5} roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.06, -0.2]}>
-        <cylinderGeometry args={[0.22, 0.26, 0.08, 16]} />
-        <meshStandardMaterial color="#080c12" metalness={0.5} roughness={0.7} />
-      </mesh>
-    </group>
-  );
+  return <group ref={host} scale={SCALE} rotation={[0, Math.PI, 0]} />;
 }

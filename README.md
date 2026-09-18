@@ -7,7 +7,7 @@ glassmorphic sidebar over the whole scene.
 Built with Next.js 16 (App Router), React Three Fiber v9, Tailwind CSS v4 and
 Apache ECharts 6.
 
-## Status — Phases 1 to 4 complete
+## Status — Phases 1 to 5 complete
 
 | Phase | State |
 | --- | --- |
@@ -15,14 +15,15 @@ Apache ECharts 6.
 | 2 — Data layer: Binance WS, Finnhub adapter, 5s throttle, store | done |
 | 3 — ECharts → CanvasTexture on the holo panels | done |
 | 4 — The room: window wall, rain, city skyline | done |
-| 5 — Mixamo GLTF robots, lighting rig, post-processing | not started |
+| 5 — GLTF robots, lighting rig, post-processing | done |
 | 6 — Polish, error boundaries, fallbacks | not started |
 
 What runs today: the shell with all four routes, the glass sidebar, the
 always-on-top music toggle, a five-screen holo array carrying live ECharts
-candlesticks, five procedural robot workstations below it, a compact DOM
-ticker tape along the bottom, and the room they all sit in — grid floor,
-glazed window wall, rain, and a night skyline beyond it.
+candlesticks, five GLTF robot traders at standing consoles beneath it, a
+compact DOM ticker tape along the bottom, and the room they work in — grid
+floor, structural columns, server racks, conduit, wet-floor neon and a
+glazed window wall onto a signed, advertised, rain-swept skyline.
 
 The panels plot a rolling 40-bar window of one-minute candles. BTC's window
 is back-filled from Binance's REST klines, so it is full a second after the
@@ -97,6 +98,18 @@ anywhere on the page starts the track unless the user muted it before.
 - **ECharts creates its canvas on the first `setOption`, not on `init`** — at
   least on a detached container. Resolving it once up front captures `null`
   forever, which is why `holoChart` looks it up lazily.
+- **The traders face away from the camera.** Their consoles sit at negative
+  z, which puts the desk and monitors *behind* the body rather than between
+  it and the camera. Facing the other way, every robot was a visor floating
+  over a black slab — the screens ate them.
+- **Only the face glows.** The rig ships three materials; "Black" is a small
+  plate on the head and is the one that carries the instrument's colour.
+  Lighting the body panels instead turned each robot into a featureless lamp
+  the moment Bloom got hold of it.
+- **Bloom is not decoration here.** Night City's look is neon *bleeding* into
+  fog and rain, so every emissive surface is authored `toneMapped={false}`
+  and the post chain is what spends them. Without that pass the room reads as
+  flat coloured tape.
 - **The city is three InstancedMeshes, not one.** A single instanced mesh
   shares one set of UVs, so a 15-unit block and a 90-unit tower would stretch
   the same window sheet by 6×. Splitting into height classes keeps the window

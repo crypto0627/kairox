@@ -6,6 +6,7 @@ Nothing with an unclear licence ships.
 | File | Source | Author | Licence | Downloaded |
 | --- | --- | --- | --- | --- |
 | `public/audio/synthwave-house-loop.webm` + `.mp3` | [OpenGameArt — Synthwave House Loop](https://opengameart.org/content/synthwave-house-loop) | Fupi | CC0 1.0 (public domain, no attribution required) | 2026-09-18 |
+| `public/models/robot-trader.glb` | [three.js examples — RobotExpressive](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf/RobotExpressive) | Tomás Laulhé (Quaternius), converted by Don McCurdy | CC0 1.0 | 2026-09-18 |
 
 ## Audio provenance
 
@@ -25,6 +26,29 @@ ffmpeg -i src.wav -vn -c:a libmp3lame -b:a 128k                    synthwave-hou
 ```
 
 Shipped size: 683 KB + 791 KB = **1.44 MB**, inside the 3 MB audio budget.
+
+## Model provenance
+
+Mixamo, which the original plan named, needs an Adobe sign-in, and the
+Sketchfab and Quaternius packs all download through interactive flows. The
+rig that ships is the three.js sample robot — CC0, rigged, and carrying a
+useful clip set (Idle, Sitting, Yes, No, Wave). Re-fetch it with:
+
+```bash
+curl -L -o public/models/robot-trader.glb \
+  https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/RobotExpressive/RobotExpressive.glb
+```
+
+**The optimisation pass below was not run on it, deliberately.** It arrives at
+464 KB against an 8 MB budget, with no textures at all — its three materials
+are flat colours, which is also why re-skinning it to the room's palette is a
+three-line traverse. `gltf-transform` would have nothing to do.
+
+Everything else in the scene — the skyline, its signage and holograms, the
+room, the rain — is generated at runtime from canvas textures in
+`lib/three/textures.ts`. For a stylised neon set that is the better tool: no
+licence surface, nothing to download, and a few hundred bytes of code per
+element instead of megabytes of mesh.
 
 ## Where assets come from
 

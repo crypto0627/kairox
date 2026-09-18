@@ -69,7 +69,7 @@ export function Room() {
         <meshBasicMaterial
           map={grid}
           transparent
-          opacity={0.14}
+          opacity={0.2}
           depthWrite={false}
           toneMapped={false}
         />
