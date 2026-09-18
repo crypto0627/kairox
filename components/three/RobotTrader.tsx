@@ -15,6 +15,7 @@ import {
 } from "three";
 import { SkeletonUtils } from "three-stdlib";
 import { agentOf, useAgentStore } from "@/lib/store/agentStore";
+import { step } from "@/lib/three/environment";
 import type { Stance } from "@/lib/agent/types";
 
 const MODEL = "/models/robot-trader.glb";
@@ -198,9 +199,11 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     };
   }, [scene, animations, seed]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock }, rawDelta) => {
     const current = rig.current;
     if (!current) return;
+
+    const delta = step(rawDelta);
 
     const change = sentimentRef.current?.[symbolId] ?? 0;
     // A moving instrument makes its trader restless.

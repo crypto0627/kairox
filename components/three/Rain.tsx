@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { AdditiveBlending, Object3D, type InstancedMesh } from "three";
 import { mulberry32 } from "@/lib/three/random";
+import { usePrefersReducedMotion } from "@/lib/three/environment";
 
 const COUNT = 1300;
 /** Drops recycle over this height; also the spawn ceiling. */
@@ -33,6 +34,10 @@ interface Drop {
 export function Rain() {
   const mesh = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  // Nine hundred streaks falling constantly is the one element here that is
+  // pure motion and carries no information. Someone who asked their system
+  // for less of that should not get it.
+  const stillness = usePrefersReducedMotion();
 
   const drops = useMemo<Drop[]>(() => {
     const random = mulberry32(0x7a12c0de);
@@ -62,6 +67,8 @@ export function Rain() {
     }
     target.instanceMatrix.needsUpdate = true;
   });
+
+  if (stillness) return null;
 
   return (
     <instancedMesh

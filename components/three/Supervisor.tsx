@@ -15,6 +15,7 @@ import {
   type MeshStandardMaterial,
 } from "three";
 import { SkeletonUtils } from "three-stdlib";
+import { step, usePrefersReducedMotion } from "@/lib/three/environment";
 
 const MODEL = "/models/robot-trader.glb";
 
@@ -78,6 +79,7 @@ function angleDelta(from: number, to: number): number {
  */
 export function Supervisor() {
   const pathname = usePathname();
+  const stillness = usePrefersReducedMotion();
   const host = useRef<Group>(null);
   const rig = useRef<Rig | null>(null);
   const heading = useRef(1);
@@ -133,12 +135,16 @@ export function Supervisor() {
     };
   }, [scene, animations]);
 
-  useFrame((_, delta) => {
+  useFrame((_, rawDelta) => {
     const current = rig.current;
     const node = host.current;
     if (!current || !node) return;
 
-    const presenting = pathname === "/report";
+    const delta = step(rawDelta);
+
+    // Standing still is a legitimate thing for a supervisor to do, and it is
+    // what someone who asked for less motion should see.
+    const presenting = stillness || pathname === "/report";
 
     // Where it is trying to be. On the report page that is the podium; the
     // rest of the time it is the far end of whichever way it was already

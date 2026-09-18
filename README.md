@@ -7,7 +7,7 @@ glassmorphic sidebar over the whole scene.
 Built with Next.js 16 (App Router), React Three Fiber v9, Tailwind CSS v4 and
 Apache ECharts 6.
 
-## Status — Phases 1 to 5 complete
+## Status — all six phases complete
 
 | Phase | State |
 | --- | --- |
@@ -16,7 +16,7 @@ Apache ECharts 6.
 | 3 — ECharts → CanvasTexture on the holo panels | done |
 | 4 — The room: window wall, rain, city skyline | done |
 | 5 — GLTF robots, lighting rig, post-processing | done |
-| 6 — Polish, error boundaries, fallbacks | not started |
+| 6 — Polish, error boundaries, fallbacks | done |
 
 What runs today: the shell with all four routes, the glass sidebar, the
 always-on-top music toggle, a five-screen holo array carrying live ECharts
@@ -145,6 +145,23 @@ Three rules the layer is built around:
   counted separately and kept out of the accuracy denominator; otherwise the
   number measures volatility rather than judgment. An agent with nothing
   resolved shows a dash, never a zero.
+
+### When things fail
+
+Nothing here takes the page down with it. The 3D floor sits behind an error
+boundary, so a missing model or a browser with no WebGL context degrades to a
+message while the sidebar, the ticker and the agent pages keep working —
+verified by deleting the model and loading the page. The database being
+unreachable is reported by the pages that need it rather than shown as an
+empty table, a missing Finnhub key falls back to a labelled simulated feed,
+and a provider that will not answer becomes a 503 the floor recovers from on
+the next request.
+
+The draw loop stops while the tab is hidden; the sockets do not, so coming
+back shows current prices rather than a scene catching up. Anything that
+integrates a frame delta clamps it, because the first frame back otherwise
+carries however long you were away. `prefers-reduced-motion` removes the rain
+and stands the supervisor still.
 
 ## Architecture notes
 
