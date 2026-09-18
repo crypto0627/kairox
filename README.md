@@ -86,10 +86,16 @@ trader's visor colour and a reaction gesture from the rig's own clip set, and
 lands in Postgres so the call can be graded later against what the price
 actually did.
 
-Providers sit behind one interface, the same shape the market layer uses:
-`ollama` runs a local model for development, and a hosted model swaps in
-without touching the prompt, the schema or the normalisation — which is the
-point, because otherwise the two are not comparable.
+Providers sit behind one interface, the same shape the market layer uses.
+`ollama` runs a local model and is the default; `claude` swaps in by setting
+`AGENT_PROVIDER` and a key, and shares the prompt, the output schema and the
+normalisation with it. The schema is one raw JSON Schema object rather than a
+zod model on one side and a literal on the other, because two definitions
+drift and the whole reason to develop against a local model is being able to
+compare the two on identical input.
+
+The local model is the default deliberately: forgetting to set a variable
+should not be the thing that starts a bill.
 
 ```bash
 brew install ollama && brew services start ollama

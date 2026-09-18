@@ -1,6 +1,7 @@
 import "server-only";
 import type { AgentProvider, VerdictRequest, VerdictResult } from "./types";
 import { createOllamaProvider } from "./ollama";
+import { createClaudeProvider } from "./claude";
 
 /**
  * Provider selection, mirroring lib/market/provider.ts.
@@ -12,15 +13,14 @@ import { createOllamaProvider } from "./ollama";
  * normalisation.
  */
 function create(): AgentProvider {
+  // Defaults to the local model on purpose. Forgetting to set this should
+  // never be the thing that starts a bill.
   const choice = process.env.AGENT_PROVIDER ?? "ollama";
   switch (choice) {
     case "ollama":
       return createOllamaProvider();
     case "claude":
-      throw new Error(
-        "AGENT_PROVIDER=claude is not wired up yet. Use ollama, or ask for the " +
-          "Claude provider to be added.",
-      );
+      return createClaudeProvider();
     default:
       throw new Error(`Unknown AGENT_PROVIDER: ${choice}`);
   }
