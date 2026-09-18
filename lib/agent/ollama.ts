@@ -1,22 +1,15 @@
-import type { AgentProvider, Verdict, VerdictRequest } from "./types";
-import { VERDICT_SCHEMA, normaliseVerdict } from "./types";
-import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
+import type { AgentProvider, CompletionRequest } from "./types";
 
 const DEFAULT_HOST = "http://127.0.0.1:11434";
 const DEFAULT_MODEL = "llama3.1:8b";
-
-interface ChatResponse {
-  message?: { content?: string };
-  total_duration?: number;
-}
 
 /**
  * Local provider, for development.
  *
  * Ollama takes a JSON schema in `format` and constrains decoding to it, so the
  * response parses — but the schema is the only thing it guarantees. Bounds,
- * lengths and units are still advisory, which is why every response goes
- * through normaliseVerdict rather than straight into the database.
+ * lengths and units remain advisory, which is why every caller normalises
+ * what comes back rather than trusting it into a database column.
  */
 export function createOllamaProvider(): AgentProvider {
   const host = process.env.OLLAMA_HOST ?? DEFAULT_HOST;
@@ -26,23 +19,23 @@ export function createOllamaProvider(): AgentProvider {
     id: "ollama",
     model,
 
-    async analyse(request: VerdictRequest): Promise<Verdict> {
+    async complete(request: CompletionRequest): Promise<unknown> {
       const response = await fetch(`${host}/api/chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           model,
           stream: false,
-          format: VERDICT_SCHEMA,
+          format: request.schema,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: buildUserPrompt(request) },
+            { role: "system", content: request.system },
+            { role: "user", content: request.user },
           ],
           options: {
             temperature: 0.3,
-            // Enough for the five fields and no more; an 8B model left
-            // unbounded will happily write an essay into `reasoning`.
-            num_predict: 400,
+            // Bounded on purpose: an 8B model left unbounded will write an
+            // essay into whatever free-text field it finds.
+            num_predict: request.maxTokens ?? 400,
           },
         }),
       });
@@ -51,17 +44,13 @@ export function createOllamaProvider(): AgentProvider {
         throw new Error(`ollama ${response.status}: ${await response.text()}`);
       }
 
-      const body = (await response.json()) as ChatResponse;
+      const body = (await response.json()) as { message?: { content?: string } };
       const content = body.message?.content ?? "";
-
-      let parsed: unknown;
       try {
-        parsed = JSON.parse(content);
+        return JSON.parse(content);
       } catch {
         throw new Error(`ollama returned unparseable content: ${content.slice(0, 200)}`);
       }
-
-      return normaliseVerdict(parsed);
     },
   };
 }

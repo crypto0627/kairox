@@ -1,7 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { AgentProvider, Verdict, VerdictRequest } from "./types";
-import { VERDICT_SCHEMA, normaliseVerdict } from "./types";
-import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
+import type { AgentProvider, CompletionRequest } from "./types";
 
 /** Opus unless told otherwise. Downgrading for cost is the operator's call,
  *  and AGENT_MODEL is where they make it. */
@@ -10,12 +8,11 @@ const DEFAULT_MODEL = "claude-opus-4-8";
 /**
  * Hosted provider.
  *
- * Shares the system prompt, the user prompt and — the part that matters — the
- * same VERDICT_SCHEMA that constrains the local model. Structured output goes
- * through the raw `json_schema` form rather than the zod helper precisely so
- * there is one schema in the codebase: two definitions would drift, and the
- * whole reason for developing against a local model is being able to compare
- * the two on identical input.
+ * Takes the same prompts and the same schemas as the local model. Structured
+ * output goes through the raw `json_schema` form rather than the zod helper
+ * precisely so there is one schema per task in the codebase: two definitions
+ * would drift, and the whole reason for developing against a local model is
+ * being able to compare the two on identical input.
  *
  * Not the default. AGENT_PROVIDER has to name it explicitly, because a
  * provider that bills per call should never be what you get by forgetting to
@@ -29,7 +26,7 @@ export function createClaudeProvider(): AgentProvider {
     id: "claude",
     model,
 
-    async analyse(request: VerdictRequest): Promise<Verdict> {
+    async complete(request: CompletionRequest): Promise<unknown> {
       let response;
       try {
         response = await client.messages.create({
@@ -38,12 +35,12 @@ export function createClaudeProvider(): AgentProvider {
           // couple of hundred tokens, but adaptive thinking draws from the
           // same budget and a truncated response costs a whole retry.
           max_tokens: 8000,
-          system: SYSTEM_PROMPT,
+          system: request.system,
           thinking: { type: "adaptive" },
           output_config: {
-            format: { type: "json_schema", schema: VERDICT_SCHEMA },
+            format: { type: "json_schema", schema: request.schema },
           },
-          messages: [{ role: "user", content: buildUserPrompt(request) }],
+          messages: [{ role: "user", content: request.user }],
         });
       } catch (error) {
         // Separate the retryable from the misconfigured — the caller turns
@@ -65,17 +62,11 @@ export function createClaudeProvider(): AgentProvider {
         throw new Error(`no text block in response (stop_reason: ${response.stop_reason})`);
       }
 
-      let parsed: unknown;
       try {
-        parsed = JSON.parse(text.text);
+        return JSON.parse(text.text);
       } catch {
         throw new Error(`claude returned unparseable content: ${text.text.slice(0, 200)}`);
       }
-
-      // Normalised on the same path as the local model. A schema-constrained
-      // response should not need it, but the database constraint is the thing
-      // that must hold, not our confidence in the provider.
-      return normaliseVerdict(parsed);
     },
   };
 }

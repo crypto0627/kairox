@@ -72,3 +72,24 @@ create table if not exists floor_config (
 );
 
 insert into floor_config (id) values (true) on conflict (id) do nothing;
+
+-- Desk reports: the supervisor's cross-instrument read. One row per report,
+-- kept so the page can show what was said earlier rather than only the last.
+create table if not exists desk_report (
+  id          bigserial   primary key,
+  created_at  timestamptz not null default now(),
+  headline    text        not null,
+  summary     text        not null,
+  agreement   text        not null default '',
+  watch       text[]      not null default '{}',
+  caveat      text        not null default '',
+  -- What the floor looked like when it was written, so a report read later
+  -- is not mistaken for a comment on a different session.
+  instruments integer     not null,
+  simulated   integer     not null,
+  provider    text        not null,
+  model       text        not null,
+  latency_ms  integer     not null
+);
+
+create index if not exists desk_report_time on desk_report (created_at desc);

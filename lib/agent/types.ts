@@ -29,14 +29,33 @@ export interface VerdictResult extends Verdict {
   latencyMs: number;
 }
 
+/** One schema-constrained completion. The provider knows nothing about what
+ *  the call is for. */
+export interface CompletionRequest {
+  system: string;
+  user: string;
+  /** JSON Schema the response is constrained to. Shaped for the Anthropic
+   *  SDK's json_schema field, which Ollama's `format` accepts unchanged. */
+  schema: Record<string, unknown>;
+  maxTokens?: number;
+}
+
+/**
+ * A provider is a transport, not a task.
+ *
+ * It used to expose `analyse` directly, which meant a second kind of call —
+ * the desk report — would have had to add a second method to every provider.
+ * Both tasks constrain a schema-shaped completion; only the prompt and the
+ * schema differ, so that is all that lives above this line.
+ */
 export interface AgentProvider {
   readonly id: string;
   readonly model: string;
-  analyse(request: VerdictRequest): Promise<Verdict>;
+  complete(request: CompletionRequest): Promise<unknown>;
 }
 
 /** The JSON shape both providers constrain their output to. */
-export const VERDICT_SCHEMA = {
+export const VERDICT_SCHEMA: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -52,7 +71,7 @@ export const VERDICT_SCHEMA = {
     risk: { type: "string", description: "The single thing that would break this call." },
   },
   required: ["stance", "confidence", "headline", "reasoning", "risk"],
-} as const;
+};
 
 /**
  * Coerce whatever came back into a Verdict that the database will accept.

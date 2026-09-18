@@ -121,6 +121,11 @@ Every call is graded twenty minutes later against a 0.15% dead band, from
 prices the server fetches itself — a judgment gets marked whether or not
 anyone had the tab open when it came due. `/history` is the scoreboard.
 
+`/report` is the supervisor's job: the cross-instrument read no single agent
+can write, since each of them sees only its own instrument. It weighs their
+latest calls and their resolved records, and names where an agent contradicts
+another or its own measurements. Also on demand.
+
 Three rules the layer is built around:
 
 - **A verdict records the feed it was made on.** A call against the simulated
@@ -131,6 +136,10 @@ Three rules the layer is built around:
   StrictMode double-mount put nine rows in the log for five instruments; two
   tabs would do the same. The client guards itself as well, but the client is
   not what can be trusted with the bill.
+- **An agent that was not asked has no opinion.** The supervisor kept
+  attributing calls to agents nobody had consulted, so asked/not-asked moved
+  into the heading of each instrument block and an unasked agent gets no
+  verdict line at all. Stated as one field among many, it was ignored.
 - **A directional call the market never answered is unresolved, not wrong.**
   Inside the dead band nothing was proven either way, so those rows are
   counted separately and kept out of the accuracy denominator; otherwise the

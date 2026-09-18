@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { agentOf, useAgentStore } from "@/lib/store/agentStore";
 import { useMarketStore } from "@/lib/store/marketStore";
@@ -26,8 +27,12 @@ export function AgentInspector() {
   const select = useAgentStore((s) => s.select);
   const [asking, setAsking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const pathname = usePathname();
 
-  if (!selected) return null;
+  // Docked right, which is exactly where Report and History put their text.
+  // The floor is something you inspect from the floor; over a document it is
+  // just a panel eating the right third of the page.
+  if (!selected || pathname !== "/") return null;
 
   const spec = SYMBOL_BY_ID.get(selected);
   const agent = agentOf(agents, selected);

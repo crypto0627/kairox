@@ -1,5 +1,15 @@
 import "server-only";
 import type { AgentProvider, VerdictRequest, VerdictResult } from "./types";
+import { VERDICT_SCHEMA, normaliseVerdict } from "./types";
+import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
+import {
+  REPORT_SCHEMA,
+  REPORT_SYSTEM,
+  buildReportPrompt,
+  normaliseReport,
+  type DeskReport,
+  type ReportInstrument,
+} from "./report";
 import { createOllamaProvider } from "./ollama";
 import { createClaudeProvider } from "./claude";
 
@@ -123,7 +133,17 @@ export async function analyse(
 
   const provider = agentProvider();
   const started = Date.now();
-  const work = runQueued(() => provider.analyse(request)).then((verdict) => ({
+  const work = runQueued(async () => {
+    const raw = await provider.complete({
+      system: SYSTEM_PROMPT,
+      user: buildUserPrompt(request),
+      schema: VERDICT_SCHEMA,
+    });
+    // Normalised whichever provider answered. A schema-constrained response
+    // should not need it, but the thing that has to hold is the CHECK
+    // constraint on the column, not our confidence in the model.
+    return normaliseVerdict(raw);
+  }).then((verdict) => ({
     ...verdict,
     provider: provider.id,
     model: provider.model,
@@ -138,4 +158,46 @@ export async function analyse(
     inFlight.delete(key);
     throw error;
   }
+}
+
+export interface ReportResult extends DeskReport {
+  provider: string;
+  model: string;
+  latencyMs: number;
+}
+
+/**
+ * The supervisor's cross-instrument read.
+ *
+ * Not coalesced: a report is written when someone asks for one, and two
+ * requests a minute apart are asking about two different floors. It is
+ * counted against the hourly cap like any other call, and it queues behind
+ * the agents like any other call — on a local model it is the most expensive
+ * single thing the app does, because the prompt carries all five instruments.
+ */
+export async function writeReport(
+  instruments: ReportInstrument[],
+  hourlyCap = Number.POSITIVE_INFINITY,
+): Promise<ReportResult> {
+  if (!withinCap(hourlyCap)) throw new CapReached(hourlyCap);
+  callTimes.push(Date.now());
+
+  const provider = agentProvider();
+  const started = Date.now();
+
+  const raw = await runQueued(() =>
+    provider.complete({
+      system: REPORT_SYSTEM,
+      user: buildReportPrompt(instruments),
+      schema: REPORT_SCHEMA,
+      maxTokens: 900,
+    }),
+  );
+
+  return {
+    ...normaliseReport(raw),
+    provider: provider.id,
+    model: provider.model,
+    latencyMs: Date.now() - started,
+  };
 }

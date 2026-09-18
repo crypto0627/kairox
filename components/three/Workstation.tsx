@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, type RefObject } from "react";
+import { usePathname } from "next/navigation";
 import { RoundedBox } from "@react-three/drei";
 import { RobotTrader } from "./RobotTrader";
 import { VerdictHolo } from "./VerdictHolo";
@@ -35,6 +36,9 @@ export function Workstation({
   position = [0, 0, 0],
   rotation = [0, 0, 0],
 }: WorkstationProps) {
+  // Clicking only does something where the inspector can answer.
+  const onFloor = usePathname() === "/";
+
   return (
     <group position={position} rotation={rotation}>
       {/* --- console body --- */}
@@ -136,11 +140,14 @@ export function Workstation({
           reliably raycast. */}
       <mesh
         position={[0, 1.15, -0.4]}
+        visible={onFloor}
         onClick={(event) => {
+          if (!onFloor) return;
           event.stopPropagation();
           useAgentStore.getState().select(symbolId);
         }}
         onPointerOver={(event) => {
+          if (!onFloor) return;
           event.stopPropagation();
           document.body.style.cursor = "pointer";
         }}
