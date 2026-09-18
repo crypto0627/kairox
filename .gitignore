@@ -1,0 +1,55 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# pnpm content-addressable store (lives beside the project on this machine)
+.pnpm-store/
+
+# Licensed audio — see public/audio/README.md before committing anything here
+/public/audio/*.mp3
+/public/audio/*.webm
+
+# 3D assets — commit only after recording the licence in ASSETS.md
+/public/models/*.glb
+/public/hdri/*.hdr
+
+# pnpm scratch files left on fuse-mounted filesystems
+_tmp_*
