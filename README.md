@@ -97,7 +97,11 @@ ollama pull llama3.1:8b
 pnpm db:up && pnpm db:push
 ```
 
-Two rules the layer is built around:
+Every call is graded twenty minutes later against a 0.15% dead band, from
+prices the server fetches itself — a judgment gets marked whether or not
+anyone had the tab open when it came due. `/history` is the scoreboard.
+
+Three rules the layer is built around:
 
 - **A verdict records the feed it was made on.** A call against the simulated
   walk cannot be scored against one made on a live feed, and the accuracy
@@ -107,6 +111,11 @@ Two rules the layer is built around:
   StrictMode double-mount put nine rows in the log for five instruments; two
   tabs would do the same. The client guards itself as well, but the client is
   not what can be trusted with the bill.
+- **A directional call the market never answered is unresolved, not wrong.**
+  Inside the dead band nothing was proven either way, so those rows are
+  counted separately and kept out of the accuracy denominator; otherwise the
+  number measures volatility rather than judgment. An agent with nothing
+  resolved shows a dash, never a zero.
 
 ## Architecture notes
 

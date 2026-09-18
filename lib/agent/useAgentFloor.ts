@@ -64,11 +64,22 @@ export function useAgentFloor() {
       }
     }
 
+    /** Grade whatever has come due. Cheap, idempotent, and it means the
+     *  History page is current without anyone pressing anything. */
+    async function score() {
+      try {
+        await fetch("/api/agents/score", { method: "POST" });
+      } catch {
+        /* the scorer being down does not stop the floor reporting */
+      }
+    }
+
     async function cycle() {
       for (const spec of SYMBOLS) {
         if (!live) return;
         await askOne(spec.id);
       }
+      if (live) await score();
     }
 
     const first = window.setTimeout(() => void cycle(), FIRST_RUN_MS);

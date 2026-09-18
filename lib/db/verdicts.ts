@@ -80,11 +80,74 @@ export async function verdictHistory(limit = 100): Promise<VerdictRow[]> {
   `;
 }
 
+/** A verdict old enough to grade, with what it needs to be graded. */
+export interface PendingVerdict {
+  id: string;
+  symbolId: string;
+  decidedAt: string;
+  price: number;
+  stance: Stance;
+}
+
+/**
+ * Judgments past their horizon that nobody has graded yet.
+ *
+ * Simulated rows are skipped, not graded and excluded later: scoring a call
+ * against a random walk would write a number into the log that means nothing,
+ * and a row that carries a meaningless outcome invites someone to average it.
+ */
+export async function pendingVerdicts(
+  horizonMinutes: number,
+  limit = 40,
+): Promise<PendingVerdict[]> {
+  return db<PendingVerdict[]>`
+    select
+      id::text      as "id",
+      symbol_id     as "symbolId",
+      decided_at    as "decidedAt",
+      price::float8 as "price",
+      stance
+    from agent_verdict
+    where scored_at is null
+      and feed_status not in ('simulated', 'closed-market')
+      and decided_at < now() - make_interval(mins => ${horizonMinutes})
+    order by decided_at
+    limit ${limit}
+  `;
+}
+
+export interface ScoreInput {
+  id: string;
+  priceAfter: number;
+  horizonMin: number;
+  bandPct: number;
+  outcome: "hit" | "miss" | "flat";
+}
+
+/** Write a grade. band_pct is stored per row so retuning the rule later
+ *  cannot silently rewrite history. */
+export async function applyScore(input: ScoreInput): Promise<void> {
+  await db`
+    update agent_verdict set
+      scored_at   = now(),
+      price_after = ${input.priceAfter},
+      horizon_min = ${input.horizonMin},
+      band_pct    = ${input.bandPct},
+      outcome     = ${input.outcome}
+    where id = ${input.id}::bigint
+      and scored_at is null
+  `;
+}
+
 export interface Scoreboard {
   symbolId: string;
   scored: number;
   hits: number;
-  /** null until something has actually been graded. Never guess an accuracy. */
+  misses: number;
+  /** Calls where the market did not move enough to resolve the direction. */
+  unresolved: number;
+  /** hits / (hits + misses); null until something has actually resolved.
+   *  Never guess an accuracy. */
   accuracy: number | null;
 }
 
@@ -98,12 +161,19 @@ export interface Scoreboard {
 export async function scoreboard(): Promise<Scoreboard[]> {
   return db<Scoreboard[]>`
     select
-      symbol_id                                             as "symbolId",
-      count(*)::int                                         as "scored",
-      count(*) filter (where outcome = 'hit')::int          as "hits",
-      case when count(*) = 0 then null
-           else round(count(*) filter (where outcome = 'hit')::numeric
-                      / count(*), 3)::float8 end            as "accuracy"
+      symbol_id                                        as "symbolId",
+      count(*)::int                                    as "scored",
+      count(*) filter (where outcome = 'hit')::int     as "hits",
+      count(*) filter (where outcome = 'miss')::int    as "misses",
+      count(*) filter (where outcome = 'flat')::int    as "unresolved",
+      -- Unresolved calls are excluded from the denominator. A directional
+      -- call the market never answered is not a wrong call, and counting it
+      -- as one would punish an agent for a quiet twenty minutes.
+      case when count(*) filter (where outcome in ('hit','miss')) = 0 then null
+           else round(
+             count(*) filter (where outcome = 'hit')::numeric
+             / count(*) filter (where outcome in ('hit','miss')), 3)::float8
+      end                                              as "accuracy"
     from agent_verdict
     where scored_at is not null
       and feed_status not in ('simulated', 'closed-market')
