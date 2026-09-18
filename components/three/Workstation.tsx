@@ -1,26 +1,35 @@
 "use client";
 
+import type { RefObject } from "react";
 import { RoundedBox } from "@react-three/drei";
 import { RobotTrader } from "./RobotTrader";
 
 export interface WorkstationProps {
   seed: number;
-  sentiment?: number;
+  symbolId: string;
+  sentimentRef: RefObject<Record<string, number>>;
   position?: [number, number, number];
   rotation?: [number, number, number];
 }
 
-/** Desk rig + one robot. Desk stays procedural even after the GLTF swap. */
+/** Desk rig + one robot. The desk stays procedural after the GLTF swap. */
 export function Workstation({
   seed,
-  sentiment,
+  symbolId,
+  sentimentRef,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
 }: WorkstationProps) {
   return (
     <group position={position} rotation={rotation}>
-      {/* desk top */}
-      <RoundedBox args={[1.5, 0.06, 0.72]} radius={0.02} smoothness={3} position={[0, 0.74, 0.5]} receiveShadow castShadow>
+      <RoundedBox
+        args={[1.5, 0.06, 0.72]}
+        radius={0.02}
+        smoothness={3}
+        position={[0, 0.74, 0.5]}
+        receiveShadow
+        castShadow
+      >
         <meshStandardMaterial color="#0b1118" metalness={0.6} roughness={0.45} />
       </RoundedBox>
 
@@ -30,7 +39,6 @@ export function Workstation({
         <meshBasicMaterial color="#ff2e88" toneMapped={false} />
       </mesh>
 
-      {/* legs */}
       {[-0.66, 0.66].map((x) => (
         <mesh key={x} position={[x, 0.37, 0.5]}>
           <boxGeometry args={[0.05, 0.74, 0.6]} />
@@ -66,7 +74,7 @@ export function Workstation({
         />
       </mesh>
 
-      <RobotTrader seed={seed} sentiment={sentiment} />
+      <RobotTrader seed={seed} symbolId={symbolId} sentimentRef={sentimentRef} />
     </group>
   );
 }

@@ -160,7 +160,10 @@ export function AudioProvider({
   useEffect(() => {
     if (readPreference() === "off") return;
 
-    void start();
+    // Deferred: calling start() synchronously here would setState during the
+    // effect and cascade a render. The autoplay attempt is best-effort
+    // anyway — it succeeds only on a return visit with a prior gesture.
+    const attempt = window.setTimeout(() => void start(), 0);
 
     const onFirstGesture = () => {
       if (!wantsAudioRef.current) void start();
@@ -168,6 +171,7 @@ export function AudioProvider({
     document.addEventListener("pointerdown", onFirstGesture, { once: true });
     document.addEventListener("keydown", onFirstGesture, { once: true });
     return () => {
+      window.clearTimeout(attempt);
       document.removeEventListener("pointerdown", onFirstGesture);
       document.removeEventListener("keydown", onFirstGesture);
     };
