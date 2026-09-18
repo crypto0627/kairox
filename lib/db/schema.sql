@@ -61,6 +61,8 @@ create table if not exists agent_config (
 -- impossible, which is cheaper than remembering to filter by a magic key.
 create table if not exists floor_config (
   id            boolean     primary key default true check (id),
+  -- How often finished verdicts are graded. Not an analysis cadence: agents
+  -- are asked on demand, never on a timer.
   cycle_minutes integer     not null default 5  check (cycle_minutes between 1 and 240),
   -- Hard ceiling on model calls per rolling hour. This is the brake: a local
   -- model costs patience, a hosted one costs money, and nothing else in the

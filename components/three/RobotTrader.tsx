@@ -49,6 +49,8 @@ const THINKING = new Color("#8b5cf6");
 /** Scratch target for the per-frame lerp; used and consumed within one frame. */
 const TARGET = new Color();
 const OFFLINE = new Color("#243040");
+/** Nobody has asked this agent anything yet. */
+const UNASKED = new Color("#1d3a46");
 
 /** Reaction clips, from the rig's own set. */
 const REACTION: Record<Stance, string> = {
@@ -225,7 +227,9 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     if (agent.phase === "offline" || agent.phase === "standby") tint = OFFLINE;
     else if (agent.phase === "thinking") tint = THINKING;
     else if (agent.phase === "spoken") tint = STANCE_COLOUR[agent.stance];
-    else tint = STANCE_COLOUR.flat;
+    // Unasked is not the same as "called it flat". Since analysis only runs
+    // on request, an idle visor must not wear a stance colour.
+    else tint = UNASKED;
 
     // A thinking agent pulses; a settled one burns steady. The pulse is baked
     // into the emissive colour rather than emissiveIntensity — the intensity

@@ -122,7 +122,8 @@ export function AgentInspector() {
         <p className="mt-6 text-sm text-amber-300">{agent.error ?? "Agent unavailable."}</p>
       ) : !spoken ? (
         <p className="mt-6 text-sm text-hud-dim">
-          No call yet. The floor reports a few seconds after the panels fill.
+          This agent has not been asked yet. Analysis runs only when you ask
+          for it — press ANALYSE NOW.
         </p>
       ) : (
         <>

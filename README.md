@@ -79,12 +79,26 @@ anywhere on the page starts the track unless the user muted it before.
 
 ### The agent floor
 
-Each robot owns one instrument and actually reports on it. Every few minutes
-its window of bars goes to a model, which answers with a stance, a confidence,
-a headline and the one thing that would break the call. The verdict drives the
-trader's visor colour and a reaction gesture from the rig's own clip set, and
-lands in Postgres so the call can be graded later against what the price
-actually did.
+Each robot owns one instrument and reports on it when asked. Click a trader
+and press ANALYSE NOW: its window of bars goes to a model, which answers with
+a stance, a confidence, a headline and the one thing that would break the
+call. The verdict drives the trader's visor colour and a reaction gesture from
+the rig's own clip set, and lands in Postgres so the call can be graded later
+against what the price actually did.
+
+Nothing analyses on a timer. A model left running unattended spends either ten
+seconds of a laptop or real money per call, and an idle floor does not need
+telling every five minutes that four simulated feeds have no clear trend. The
+only scheduled work is grading calls that have come due, which costs one REST
+quote per instrument.
+
+The model is not asked to find the trend in forty raw closes — an 8B model
+reads a clean 3% climb as "no clear direction" and hedges. The window's
+features are computed exactly in TypeScript (change, typical bar move, how far
+the close held toward the move, how many bars agreed) and the model is asked
+only for the judgment. Trend strength is measured against √n, what a random
+walk of the same length drifts anyway, so the noise threshold is a statistic
+rather than a guess.
 
 Providers sit behind one interface, the same shape the market layer uses.
 `ollama` runs a local model and is the default; `claude` swaps in by setting

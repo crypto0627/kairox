@@ -56,10 +56,12 @@ export default async function ProfilePage() {
           Profile
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-hud-dim">
-          How often the floor thinks, what each agent is told to look for, and
-          the ceiling on how much thinking it may do in an hour. The cap is a
-          hard stop held in the server&apos;s memory rather than derived from the
-          log, so it still holds when the database does not.
+          What each agent is told to look for, how often finished calls are
+          graded, and the ceiling on how much thinking the floor may do in an
+          hour. Agents analyse only when asked — click a trader and press
+          ANALYSE NOW. The cap is a hard stop held in the server&apos;s memory
+          rather than derived from the log, so it still holds when the database
+          does not.
         </p>
 
         <FloorSettingsForm initial={settings} />

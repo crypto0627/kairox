@@ -60,11 +60,7 @@ export function FloorSettingsForm({ initial }: { initial: Settings }) {
 
   const { cycleMinutes, hourlyCap } = settings.floor;
   const enabledCount = settings.agents.filter((a) => a.enabled).length;
-  // What the current cadence actually costs in calls. A cap that sits below
-  // this bites every hour, which is worth knowing before it happens rather
-  // than after.
-  const perHour = Math.round(enabledCount * (60 / Math.max(1, cycleMinutes)));
-  const overBudget = perHour > hourlyCap;
+  const remaining = Math.max(0, hourlyCap - settings.callsThisHour);
 
   const patch = (next: Partial<Settings>) => setSettings({ ...settings, ...next });
   const patchAgent = (symbolId: string, change: Partial<AgentConfig>) =>
@@ -88,7 +84,7 @@ export function FloorSettingsForm({ initial }: { initial: Settings }) {
 
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] text-hud-dim">Cycle (minutes)</span>
+            <span className="font-mono text-[11px] text-hud-dim">Scoring sweep (minutes)</span>
             <input
               type="number"
               min={1}
@@ -126,14 +122,19 @@ export function FloorSettingsForm({ initial }: { initial: Settings }) {
         <p
           className={[
             "mt-3 font-mono text-[11px]",
-            overBudget ? "text-neon-magenta" : "text-hud-dim",
+            remaining === 0 ? "text-neon-magenta" : "text-hud-dim",
           ].join(" ")}
         >
-          {enabledCount} agent{enabledCount === 1 ? "" : "s"} every {cycleMinutes} min ={" "}
-          <span className="tabular-nums">{perHour}</span> calls/hour
-          {overBudget
-            ? " — over the cap, so later agents in each cycle will be refused."
-            : " — within the cap."}
+          {remaining === 0
+            ? "Budget spent — ANALYSE NOW will be refused until the hour rolls."
+            : `${remaining} analyses left this hour, across ${enabledCount} agent${
+                enabledCount === 1 ? "" : "s"
+              } on duty.`}
+        </p>
+        <p className="mt-1 font-mono text-[10px] text-hud-dim/70">
+          The sweep only grades calls whose horizon has passed; it never asks an
+          agent anything. Analysis runs when you press ANALYSE NOW on a trader,
+          and that is what the cap counts.
         </p>
 
         <p className="mt-2 font-mono text-[10px] text-hud-dim/70">
