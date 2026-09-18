@@ -222,7 +222,7 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     }
 
     let tint: Color;
-    if (agent.phase === "offline") tint = OFFLINE;
+    if (agent.phase === "offline" || agent.phase === "standby") tint = OFFLINE;
     else if (agent.phase === "thinking") tint = THINKING;
     else if (agent.phase === "spoken") tint = STANCE_COLOUR[agent.stance];
     else tint = STANCE_COLOUR.flat;

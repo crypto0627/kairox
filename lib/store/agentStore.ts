@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import type { Stance } from "@/lib/agent/types";
 
-export type AgentPhase = "idle" | "thinking" | "spoken" | "offline";
+/**
+ * "offline" means the agent could not answer; "standby" means it was told not
+ * to. Collapsing the two made a deliberate setting read as a fault on the
+ * floor — the panel said AGENT OFFLINE with "Error: agent disabled" under it.
+ */
+export type AgentPhase = "idle" | "thinking" | "spoken" | "offline" | "standby";
 
 export interface AgentState {
   phase: AgentPhase;

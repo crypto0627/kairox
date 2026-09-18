@@ -53,6 +53,12 @@ export function useAgentFloor() {
             status: market.status[symbolId] ?? "connecting",
           }),
         });
+        // 423 is configuration, not failure: the agent was stood down from
+        // the Profile page and should look it.
+        if (response.status === 423) {
+          if (live) setPhase(symbolId, "standby");
+          return;
+        }
         if (!response.ok) {
           const detail = (await response.json().catch(() => ({}))) as { error?: string };
           throw new Error(detail.error ?? `HTTP ${response.status}`);

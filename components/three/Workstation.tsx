@@ -3,6 +3,7 @@
 import { Suspense, type RefObject } from "react";
 import { RoundedBox } from "@react-three/drei";
 import { RobotTrader } from "./RobotTrader";
+import { VerdictHolo } from "./VerdictHolo";
 
 export interface WorkstationProps {
   seed: number;
@@ -126,6 +127,9 @@ export function Workstation({
         <cylinderGeometry args={[0.014, 0.014, 0.95, 6]} />
         <meshStandardMaterial color="#05080c" metalness={0.3} roughness={0.9} />
       </mesh>
+
+      {/* What this agent currently thinks, hanging above its head. */}
+      <VerdictHolo symbolId={symbolId} />
 
       {/* The rig streams in on its own boundary so a slow model never blanks
           the whole room. */}
