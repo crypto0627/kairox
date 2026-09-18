@@ -48,3 +48,25 @@ create index if not exists agent_verdict_symbol_time
 create index if not exists agent_verdict_pending
   on agent_verdict (decided_at)
   where scored_at is null;
+
+-- Per-agent configuration. One row per instrument on the floor.
+create table if not exists agent_config (
+  symbol_id  text        primary key,
+  persona    text        not null default '',
+  enabled    boolean     not null default true,
+  updated_at timestamptz not null default now()
+);
+
+-- Floor-wide settings. A single row: the `check (id)` makes a second one
+-- impossible, which is cheaper than remembering to filter by a magic key.
+create table if not exists floor_config (
+  id            boolean     primary key default true check (id),
+  cycle_minutes integer     not null default 5  check (cycle_minutes between 1 and 240),
+  -- Hard ceiling on model calls per rolling hour. This is the brake: a local
+  -- model costs patience, a hosted one costs money, and nothing else in the
+  -- system stops a bad loop from running all night.
+  hourly_cap    integer     not null default 60 check (hourly_cap between 0 and 2000),
+  updated_at    timestamptz not null default now()
+);
+
+insert into floor_config (id) values (true) on conflict (id) do nothing;

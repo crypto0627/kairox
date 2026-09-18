@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { SYMBOL_BY_ID } from "@/lib/market/symbols";
 import type { Candle, FeedStatus, Quote } from "@/lib/market/types";
-import { analyse } from "@/lib/agent";
+import { analyse, CapReached } from "@/lib/agent";
+import { DEFAULT_FLOOR, isEnabled, personaFor, readSettings } from "@/lib/db/config";
 import { hasDatabase } from "@/lib/db/client";
 import { recordVerdict } from "@/lib/db/verdicts";
 
@@ -96,10 +97,39 @@ export async function POST(request: Request) {
     ? (statusInput as FeedStatus)
     : "connecting";
 
+  // Configuration is a convenience, not a dependency: if the settings table
+  // cannot be read the floor still runs, on the defaults.
+  let persona = "";
+  let hourlyCap = DEFAULT_FLOOR.hourlyCap;
+  if (hasDatabase()) {
+    try {
+      const [enabled, configured, settings] = await Promise.all([
+        isEnabled(spec.id),
+        personaFor(spec.id),
+        readSettings(),
+      ]);
+      if (!enabled) {
+        return NextResponse.json({ error: "agent disabled", symbolId: spec.id }, { status: 423 });
+      }
+      persona = configured;
+      hourlyCap = settings.floor.hourlyCap;
+    } catch {
+      /* fall through on defaults */
+    }
+  }
+
   let outcome;
   try {
-    outcome = await analyse({ spec, bars, quote, status });
+    outcome = await analyse({ spec, bars, quote, status, persona }, hourlyCap);
   } catch (error) {
+    if (error instanceof CapReached) {
+      // Not a failure. The floor asked for more thinking than its budget
+      // allows, and saying so plainly beats silently spending anyway.
+      return NextResponse.json(
+        { error: "hourly cap reached", cap: error.cap },
+        { status: 429 },
+      );
+    }
     // The model being down is an ordinary condition here, not a crash: the
     // floor keeps trading and the panel says the agent is offline.
     return NextResponse.json(

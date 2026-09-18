@@ -7,8 +7,8 @@ import { SYMBOLS } from "@/lib/market/symbols";
 
 /** A verdict on an eight-bar window is noise; wait for a real one. */
 const MIN_BARS = 8;
-/** How often the floor re-reads its instruments. */
-const CYCLE_MS = 5 * 60_000;
+/** Fallback cadence, used until the floor's own settings arrive. */
+const DEFAULT_CYCLE_MS = 5 * 60_000;
 /** First pass shortly after the back-fill lands, not on the very first frame. */
 const FIRST_RUN_MS = 6_000;
 
@@ -82,14 +82,34 @@ export function useAgentFloor() {
       if (live) await score();
     }
 
-    const first = window.setTimeout(() => void cycle(), FIRST_RUN_MS);
-    const repeat = window.setInterval(() => void cycle(), CYCLE_MS);
+    let repeat: number | undefined;
+
+    /** Cadence is a setting, not a constant — Profile owns it. */
+    async function schedule() {
+      let cycleMs = DEFAULT_CYCLE_MS;
+      try {
+        const response = await fetch("/api/floor/config");
+        if (response.ok) {
+          const body = (await response.json()) as { floor?: { cycleMinutes?: number } };
+          const minutes = body.floor?.cycleMinutes;
+          if (typeof minutes === "number" && minutes > 0) cycleMs = minutes * 60_000;
+        }
+      } catch {
+        /* defaults are fine */
+      }
+      if (live) repeat = window.setInterval(() => void cycle(), cycleMs);
+    }
+
+    const first = window.setTimeout(() => {
+      void cycle();
+      void schedule();
+    }, FIRST_RUN_MS);
 
     return () => {
       live = false;
       floorClaimed = false;
       window.clearTimeout(first);
-      window.clearInterval(repeat);
+      if (repeat !== undefined) window.clearInterval(repeat);
     };
   }, []);
 }

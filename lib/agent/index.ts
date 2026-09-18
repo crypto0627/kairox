@@ -68,6 +68,37 @@ interface Entry {
 
 const inFlight = new Map<string, Entry>();
 
+/**
+ * Rolling-hour call counter — the brake.
+ *
+ * Deliberately in memory rather than a query over the log. The cap exists to
+ * stop a runaway loop, and a limiter that stops working when the database is
+ * unreachable fails in exactly the situation it is there for. A restart
+ * clears it, which is the right trade: the ceiling is per-process and cannot
+ * be lost, but it also cannot be inherited by a process that never ran.
+ */
+const callTimes: number[] = [];
+
+export class CapReached extends Error {
+  constructor(readonly cap: number) {
+    super(`hourly cap of ${cap} model calls reached`);
+    this.name = "CapReached";
+  }
+}
+
+function withinCap(cap: number): boolean {
+  const cutoff = Date.now() - 3_600_000;
+  while (callTimes.length && callTimes[0] < cutoff) callTimes.shift();
+  return callTimes.length < cap;
+}
+
+/** Calls made in the last rolling hour, for the Profile page. */
+export function callsThisHour(): number {
+  const cutoff = Date.now() - 3_600_000;
+  while (callTimes.length && callTimes[0] < cutoff) callTimes.shift();
+  return callTimes.length;
+}
+
 export interface AnalyseOutcome {
   result: VerdictResult;
   /** True when this answer was served from the cooldown window rather than
@@ -75,12 +106,19 @@ export interface AnalyseOutcome {
   cached: boolean;
 }
 
-export async function analyse(request: VerdictRequest): Promise<AnalyseOutcome> {
+export async function analyse(
+  request: VerdictRequest,
+  hourlyCap = Number.POSITIVE_INFINITY,
+): Promise<AnalyseOutcome> {
   const key = request.spec.id;
   const existing = inFlight.get(key);
   if (existing && Date.now() - existing.at < COOLDOWN_MS) {
+    // A coalesced answer costs nothing, so it is not counted against the cap.
     return { result: await existing.work, cached: true };
   }
+
+  if (!withinCap(hourlyCap)) throw new CapReached(hourlyCap);
+  callTimes.push(Date.now());
 
   const provider = agentProvider();
   const started = Date.now();
