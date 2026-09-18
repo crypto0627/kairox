@@ -6,6 +6,7 @@ import { OrbitControls } from "@react-three/drei";
 import { usePathname } from "next/navigation";
 import { Vector3 } from "three";
 import { Workstation } from "./Workstation";
+import { ScreenArray } from "./ScreenArray";
 import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
 
@@ -83,6 +84,8 @@ export function Scene() {
         <planeGeometry args={[22, 0.04]} />
         <meshBasicMaterial color="#00e5ff" toneMapped={false} />
       </mesh>
+
+      <ScreenArray />
 
       {SEATS.map((seat) => (
         <Workstation

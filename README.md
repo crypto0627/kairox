@@ -7,20 +7,26 @@ glassmorphic sidebar over the whole scene.
 Built with Next.js 16 (App Router), React Three Fiber v9, Tailwind CSS v4 and
 Apache ECharts 6.
 
-## Status — Phases 1 and 2 complete
+## Status — Phases 1 to 3 complete
 
 | Phase | State |
 | --- | --- |
 | 1 — Shell, sidebar, music toggle, persistent canvas | done |
 | 2 — Data layer: Binance WS, Finnhub adapter, 5s throttle, store | done |
-| 3 — ECharts → CanvasTexture on the holo panels | not started |
-| 4 — The room: floor, window wall, rain, city, 5-panel array | not started |
+| 3 — ECharts → CanvasTexture on the holo panels | done |
+| 4 — The room: window wall, rain, city skyline (the array landed in 3) | not started |
 | 5 — Mixamo GLTF robots, lighting rig, post-processing | not started |
 | 6 — Polish, error boundaries, fallbacks | not started |
 
 What runs today: the shell with all four routes, the glass sidebar, the
-always-on-top music toggle, an R3F canvas holding five procedural robot
-workstations, and a live DOM ticker fed by real market data.
+always-on-top music toggle, a five-screen holo array carrying live ECharts
+candlesticks, five procedural robot workstations below it, and a compact DOM
+ticker tape along the bottom.
+
+The panels plot a rolling 40-bar window of one-minute candles built from the
+live feed. Nothing is back-filled, so a fresh tab starts empty and the panels
+say so — `AWAITING FIRST TICK`, then `BUILDING FIRST BARS` — until the second
+bar closes about a minute in.
 
 ## Getting started
 
@@ -77,6 +83,15 @@ anywhere on the page starts the track unless the user muted it before.
 - **Providers hide behind one interface.** `lib/market/provider.ts` defines
   it; Binance, Finnhub and the simulator all implement it, so swapping a data
   source touches one file.
+- **A holo panel is two canvases.** ECharts owns every pixel of the canvas it
+  renders into, so anything drawn on top would be wiped on its next pass.
+  `lib/chart/holoChart.ts` keeps the plot on an off-screen ECharts canvas and
+  composites it, plus the hand-drawn chrome, onto a second canvas that Three
+  uses as a `CanvasTexture`. The texture is flagged dirty from ECharts'
+  `rendered` event, so uploads happen once per 5 s flush, not once per frame.
+- **ECharts creates its canvas on the first `setOption`, not on `init`** — at
+  least on a detached container. Resolving it once up front captures `null`
+  forever, which is why `holoChart` looks it up lazily.
 - **`RobotTrader` is a placeholder behind a stable prop shape.** Phase 5
   replaces the procedural body with a Mixamo GLTF (`useGLTF` +
   `SkeletonUtils.clone()` + `useAnimations`) without touching `Workstation`.
