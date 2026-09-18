@@ -19,7 +19,8 @@ const FLUSH_MS = 5_000;
  */
 export function useMarketFeed() {
   useEffect(() => {
-    const { applyBatch, setStatus } = useMarketStore.getState();
+    const { applyBatch, seedCandles, setStatus } = useMarketStore.getState();
+    const retryTimers: number[] = [];
     const buffer = new TickBuffer(FLUSH_MS, applyBatch);
 
     const ctx: ProviderContext = {
@@ -46,7 +47,39 @@ export function useMarketFeed() {
     for (const p of providers) p.connect();
     buffer.start();
 
+    /**
+     * Back-fill runs beside the sockets, not before them: a slow or failed
+     * history request must never hold up live prices.
+     *
+     * One retry, because losing it is expensive — without history a panel
+     * needs forty minutes to draw its window, and a single DNS blip on the
+     * REST call is enough to cost that while the socket connects fine.
+     *
+     * The result is applied even if the effect has since torn down. The store
+     * is module-level and `seedCandles` only prepends bars older than what is
+     * held, so a late arrival is harmless — and discarding it would throw
+     * away a good fetch every time StrictMode double-mounts.
+     */
+    async function backfill(provider: MarketProvider, attempt = 0): Promise<void> {
+      if (!provider.history) return;
+      try {
+        const seed = await provider.history();
+        if (seed.size) {
+          seedCandles(seed);
+          return;
+        }
+      } catch {
+        /* fall through to the retry */
+      }
+      if (attempt === 0) {
+        retryTimers.push(window.setTimeout(() => void backfill(provider, 1), 4_000));
+      }
+    }
+
+    for (const p of providers) void backfill(p);
+
     return () => {
+      for (const t of retryTimers) window.clearTimeout(t);
       buffer.stop();
       for (const p of providers) p.dispose();
     };

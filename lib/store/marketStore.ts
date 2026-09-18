@@ -12,6 +12,7 @@ interface MarketState {
   status: Record<string, FeedStatus>;
   lastFlush: number;
   applyBatch: (batch: Map<string, Snapshot>) => void;
+  seedCandles: (seed: Map<string, Candle[]>) => void;
   setStatus: (symbolIds: string[], status: FeedStatus) => void;
 }
 
@@ -59,7 +60,9 @@ export const useMarketStore = create<MarketState>((set) => ({
         }
         candles[symbolId] = next;
 
-        // First bar of the session is the reference for the day's change.
+        // The oldest bar the store holds is the reference for the change
+        // figure — set once and then sticky, so the number does not jump when
+        // history lands or when old bars scroll out of the window.
         const prevClose =
           state.quotes[symbolId]?.prevClose || next[0]?.o || snap.price;
 
@@ -75,6 +78,44 @@ export const useMarketStore = create<MarketState>((set) => ({
       }
 
       return { quotes, candles, lastFlush: Date.now() };
+    }),
+
+  /**
+   * Prime symbols with closed historical bars. Merges rather than replaces:
+   * a provider's history request can resolve after its socket has already
+   * pushed a bar, so only bars older than what is held get prepended.
+   */
+  seedCandles: (seed) =>
+    set((state) => {
+      const candles = { ...state.candles };
+      const quotes = { ...state.quotes };
+      let changed = false;
+
+      for (const [symbolId, bars] of seed) {
+        if (!bars.length) continue;
+        const existing = candles[symbolId] ?? [];
+        const oldestHeld = existing[0]?.t ?? Number.POSITIVE_INFINITY;
+        const older = bars.filter((b) => b.t < oldestHeld);
+        if (!older.length) continue;
+
+        const merged = [...older, ...existing].slice(-MAX_CANDLES);
+        candles[symbolId] = merged;
+        changed = true;
+
+        // Re-anchor the change figure to the now-oldest bar.
+        const quote = quotes[symbolId];
+        const prevClose = merged[0].o;
+        if (quote && prevClose) {
+          quotes[symbolId] = {
+            ...quote,
+            prevClose,
+            change: quote.price ? quote.price - prevClose : 0,
+            changePct: quote.price ? ((quote.price - prevClose) / prevClose) * 100 : 0,
+          };
+        }
+      }
+
+      return changed ? { candles, quotes } : state;
     }),
 
   setStatus: (symbolIds, status) =>

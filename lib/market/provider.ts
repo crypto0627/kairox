@@ -1,4 +1,4 @@
-import type { FeedStatus, Tick } from "./types";
+import type { Candle, FeedStatus, Tick } from "./types";
 
 export type TickHandler = (tick: Tick) => void;
 export type StatusHandler = (symbolIds: string[], status: FeedStatus) => void;
@@ -9,6 +9,12 @@ export interface MarketProvider {
   connect(): void;
   /** Tears everything down; safe to call twice. */
   dispose(): void;
+  /**
+   * Closed bars to prime the panels with, oldest first, keyed by symbol id.
+   * Optional: a provider that has no history endpoint simply omits it and its
+   * panels fill from live ticks instead.
+   */
+  history?(): Promise<Map<string, Candle[]>> | Map<string, Candle[]>;
 }
 
 export interface ProviderContext {

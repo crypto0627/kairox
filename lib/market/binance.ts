@@ -1,5 +1,5 @@
 import { backoffDelay, type MarketProvider, type ProviderContext } from "./provider";
-import type { SymbolSpec } from "./types";
+import type { Candle, SymbolSpec } from "./types";
 
 const WS_BASE = "wss://stream.binance.com:9443/stream?streams=";
 const REST_BASE = "https://api.binance.com/api/v3";
@@ -8,6 +8,12 @@ interface TickerPayload {
   c: string; // last price
   q: string; // 24h quote volume
 }
+
+/** [openTime, open, high, low, close, volume, closeTime, quoteVolume, ...] */
+type KlineRow = [number, string, string, string, string, string, number, string];
+
+/** Bars requested. The last one is still open, so it is dropped. */
+const HISTORY_BARS = 41;
 
 /**
  * Binance combined-stream provider. Public and keyless — it connects
@@ -53,6 +59,43 @@ export function createBinanceProvider(
     );
   }
 
+  /**
+   * Binance publishes closed 1m klines over plain REST, so the BTC panel can
+   * open with a full window instead of drawing itself a minute at a time.
+   */
+  async function history(): Promise<Map<string, Candle[]>> {
+    const out = new Map<string, Candle[]>();
+    await Promise.all(
+      specs.map(async (spec) => {
+        try {
+          const res = await fetch(
+            `${REST_BASE}/klines?symbol=${spec.remote.toUpperCase()}` +
+              `&interval=1m&limit=${HISTORY_BARS}`,
+          );
+          if (!res.ok) return;
+          const rows = (await res.json()) as KlineRow[];
+          // The final row is the minute in progress; live ticks own that one.
+          const closed = rows.slice(0, -1);
+          if (!closed.length) return;
+          out.set(
+            spec.id,
+            closed.map(([t, o, h, l, c, , , quoteVolume]) => ({
+              t,
+              o: Number(o),
+              h: Number(h),
+              l: Number(l),
+              c: Number(c),
+              v: Number(quoteVolume),
+            })),
+          );
+        } catch {
+          /* best-effort: the panel just starts empty and fills from ticks */
+        }
+      }),
+    );
+    return out;
+  }
+
   function open() {
     if (disposed) return;
     ctx.onStatus(ids, attempt === 0 ? "connecting" : "reconnecting");
@@ -96,6 +139,7 @@ export function createBinanceProvider(
 
   return {
     id: "binance",
+    history,
     connect() {
       void seed();
       open();
