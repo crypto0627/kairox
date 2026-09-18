@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# …except the example, which is the only record of what needs setting. The
+# blanket rule above had been quietly excluding it since the first commit, so
+# a fresh clone had the README pointing at a file that was never there.
+!.env.local.example
 
 # vercel
 .vercel
