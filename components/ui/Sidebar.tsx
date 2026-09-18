@@ -22,6 +22,19 @@ const NAV: NavEntry[] = [
     ),
   },
   {
+    href: "/pit",
+    label: "The Pit",
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] stroke-current" {...stroke}>
+        <path d="M4 20V13" />
+        <path d="M8.5 20V9" />
+        <path d="M13 20v-5" />
+        <path d="M17.5 20V6" />
+        <path d="M3 20h18" />
+      </svg>
+    ),
+  },
+  {
     href: "/report",
     label: "Report",
     icon: (

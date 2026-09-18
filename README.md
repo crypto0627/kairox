@@ -146,6 +146,53 @@ Three rules the layer is built around:
   number measures volatility rather than judgment. An agent with nothing
   resolved shows a dash, never a zero.
 
+### The building
+
+Routes were already camera positions, so they became storeys. `/` and the
+document pages stand on the trading floor; `/pit` is one floor up, and
+changing route rides the camera through the shaft rather than cutting. There
+is no movement system — the sidebar is still how you get around, which is also
+why this works on a phone and from a keyboard.
+
+Each storey owns its own orbit limits. They used to be global and tuned for
+the trading floor, and the Pit's camera sits eighteen units from its target,
+so OrbitControls was silently clamping it to fifteen and pulling against the
+lerp every frame.
+
+The Pit's geometry is a dynamic import mounted only while you are on it, so
+the floor below never pays for a room nobody is in.
+
+### The Pit
+
+The order book as terrain. Price runs along x with the mid at the centre,
+cumulative size is height, so resting liquidity is a wall and the spread is
+the gap you stand in. Heights normalise to the deepest level in the current
+book — the shape stays legible and the absolute size is printed rather than
+implied.
+
+Binance's depth stream feeds it, with a REST poll as fallback: the socket
+drops regularly on some networks while plain REST to the same host answers
+fine, and a book two seconds stale still shows where the liquidity is.
+
+Behind it, four panels of daily context:
+
+| Panel | Source |
+| --- | --- |
+| US spot BTC ETF creations and redemptions | SoSoValue open API, no key |
+| Fear & Greed | alternative.me, no key |
+| MACD, RSI, volume vs its 20-day average | computed here from Binance daily candles |
+| Crypto wire | Finnhub, the key the equity feed already needs |
+
+The indicators are computed rather than fetched. Every free indicator API
+either wants a key or returns numbers you cannot check; MACD and RSI are
+twenty lines each, so the panel shows arithmetic this repository can be held
+to. The aggregator everyone screenshots for ETF flows returns 403 to anything
+that is not a browser, with or without a plausible user agent — that is a
+policy rather than an obstacle, so this calls a published API instead.
+
+Each source fails on its own. A panel whose source is down says so, because a
+blank panel and one showing yesterday's numbers look identical across a room.
+
 ### When things fail
 
 Nothing here takes the page down with it. The 3D floor sits behind an error

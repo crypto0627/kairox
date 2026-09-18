@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { usePathname } from "next/navigation";
 import { Vector3 } from "three";
 import { Workstation } from "./Workstation";
@@ -11,11 +12,19 @@ import { Room } from "./Room";
 import { Interior } from "./Interior";
 import { Supervisor } from "./Supervisor";
 import { CursorMagic } from "./CursorMagic";
+import dynamic from "next/dynamic";
+
+/** The Pit is a storey of its own — loaded when you ride up to it, and
+ *  unmounted when you leave, so the floor below never pays for it. */
+const PitFloor = dynamic(() => import("./PitFloor").then((m) => m.PitFloor), {
+  ssr: false,
+});
 import { CityScape } from "./CityScape";
 import { Rain } from "./Rain";
 import { Effects } from "./Effects";
 import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
+import { floorFor } from "@/lib/scene/floors";
 
 /** Five seats on a shallow arc, mirroring the screen array above. */
 const SEATS = SYMBOLS.map((spec, i) => {
@@ -28,13 +37,16 @@ const SEATS = SYMBOLS.map((spec, i) => {
   };
 });
 
-const DASHBOARD_CAM = new Vector3(0, 3.2, 11);
-const AWAY_CAM = new Vector3(-2.4, 3.6, 13.5);
-
 export function Scene() {
   const pathname = usePathname();
+  // Read during render so OrbitControls gets the storey's own limits; the
+  // position lerp stays in useFrame.
+  const floor = floorFor(pathname);
+  const limits = { min: floor.minDistance, max: floor.maxDistance };
   const { camera } = useThree();
-  const target = useRef(new Vector3().copy(DASHBOARD_CAM));
+  const controls = useRef<OrbitControlsImpl>(null);
+  const target = useRef(new Vector3().copy(floorFor("/").camera));
+  const lookAt = useRef(new Vector3().copy(floorFor("/").target));
   const sentimentRef = useRef<Record<string, number>>({});
 
   /**
@@ -54,8 +66,16 @@ export function Scene() {
   );
 
   useFrame((_, delta) => {
-    target.current.copy(pathname === "/" ? DASHBOARD_CAM : AWAY_CAM);
-    camera.position.lerp(target.current, 1 - Math.pow(0.001, delta));
+    // The lift. Same lerp as before, but the destination now carries a storey
+    // height, so changing route between floors rides the camera up the shaft
+    // rather than cutting to it.
+    const destination = floorFor(pathname);
+    target.current.copy(destination.camera);
+    lookAt.current.copy(destination.target);
+
+    const ease = 1 - Math.pow(0.001, delta);
+    camera.position.lerp(target.current, ease);
+    controls.current?.target.lerp(lookAt.current, ease);
   });
 
   return (
@@ -106,6 +126,12 @@ export function Scene() {
       <Room />
       <Interior />
 
+      {pathname === "/pit" && (
+        <Suspense fallback={null}>
+          <PitFloor />
+        </Suspense>
+      )}
+
       <ScreenArray />
 
       {/* Walks the line; comes to the front on /report. */}
@@ -129,13 +155,13 @@ export function Scene() {
       <Effects />
 
       <OrbitControls
+        ref={controls}
         makeDefault
-        target={[0, 2.4, 0]}
         enablePan={false}
         enableDamping
         dampingFactor={0.06}
-        minDistance={8}
-        maxDistance={15}
+        minDistance={limits.min}
+        maxDistance={limits.max}
         minPolarAngle={Math.PI / 2 - 0.34}
         maxPolarAngle={Math.PI / 2 + 0.06}
         minAzimuthAngle={-0.35}
