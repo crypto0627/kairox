@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,7 @@ import { Workstation } from "./Workstation";
 import { ScreenArray } from "./ScreenArray";
 import { Room } from "./Room";
 import { Interior } from "./Interior";
+import { Supervisor } from "./Supervisor";
 import { CityScape } from "./CityScape";
 import { Rain } from "./Rain";
 import { Effects } from "./Effects";
@@ -105,6 +106,11 @@ export function Scene() {
       <Interior />
 
       <ScreenArray />
+
+      {/* Walks the line; comes to the front on /report. */}
+      <Suspense fallback={null}>
+        <Supervisor />
+      </Suspense>
 
       {SEATS.map((seat) => (
         <Workstation

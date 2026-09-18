@@ -231,18 +231,23 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     // on request, an idle visor must not wear a stance colour.
     else tint = UNASKED;
 
-    // A thinking agent pulses; a settled one burns steady. The pulse is baked
-    // into the emissive colour rather than emissiveIntensity — the intensity
-    // is a plain property, and assigning to one on a material the effect owns
-    // is exactly the kind of mutation the compiler rules refuse.
+    // A thinking agent pulses hard; an unasked one breathes, which is the
+    // only hint on the floor that a trader is something you can click; a
+    // settled one burns steady. The pulse is baked into the emissive colour
+    // rather than emissiveIntensity — the intensity is a plain property, and
+    // assigning to one on a material the effect owns is exactly the kind of
+    // mutation the compiler rules refuse.
     const thinking = agent.phase === "thinking";
+    const unasked = agent.phase === "idle";
     const pulse = thinking
       ? 0.5 + Math.abs(Math.sin(clock.elapsedTime * 4 + seed * 6)) * 0.85
-      : 1;
+      : unasked
+        ? 0.7 + Math.abs(Math.sin(clock.elapsedTime * 0.9 + seed * 6)) * 0.5
+        : 1;
     TARGET.copy(tint).multiplyScalar(pulse);
 
     for (const material of current.glow) {
-      material.emissive.lerp(TARGET, thinking ? 0.2 : 0.06);
+      material.emissive.lerp(TARGET, thinking ? 0.2 : unasked ? 0.12 : 0.06);
     }
   });
 
