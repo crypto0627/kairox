@@ -7,11 +7,15 @@ import {
   AnimationClip,
   AnimationMixer,
   Color,
+  LoopOnce,
+  type AnimationAction,
   type Group,
   type Mesh,
   type MeshStandardMaterial,
 } from "three";
 import { SkeletonUtils } from "three-stdlib";
+import { agentOf, useAgentStore } from "@/lib/store/agentStore";
+import type { Stance } from "@/lib/agent/types";
 
 const MODEL = "/models/robot-trader.glb";
 useGLTF.preload(MODEL);
@@ -28,8 +32,30 @@ export interface RobotTraderProps {
   sentimentRef: RefObject<Record<string, number>>;
 }
 
-const UP = new Color("#00e5b0");
-const DOWN = new Color("#ff2e88");
+/**
+ * Visor palette — the agent's stance, not the tape.
+ *
+ * Before the agent layer this glowed with the price change, which is
+ * something the panel behind it already says. What a trader's face should
+ * carry is what the trader thinks, so long/short/flat drive it now and
+ * "thinking" gets its own colour while the model is mid-call.
+ */
+const STANCE_COLOUR: Record<Stance, Color> = {
+  long: new Color("#00e5b0"),
+  short: new Color("#ff2e88"),
+  flat: new Color("#ffb347"),
+};
+const THINKING = new Color("#8b5cf6");
+/** Scratch target for the per-frame lerp; used and consumed within one frame. */
+const TARGET = new Color();
+const OFFLINE = new Color("#243040");
+
+/** Reaction clips, from the rig's own set. */
+const REACTION: Record<Stance, string> = {
+  long: "ThumbsUp",
+  short: "No",
+  flat: "Wave",
+};
 
 /**
  * Material map for the source rig, which ships three: "Main" is the large
@@ -53,6 +79,8 @@ const CLIP = "Idle";
 interface Rig {
   mixer: AnimationMixer;
   glow: MeshStandardMaterial[];
+  idle: AnimationAction | null;
+  reactions: Partial<Record<Stance, AnimationAction>>;
 }
 
 /**
@@ -71,6 +99,9 @@ interface Rig {
 export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) {
   const host = useRef<Group>(null);
   const rig = useRef<Rig | null>(null);
+  /** decidedAt of the verdict already reacted to, so each one fires once. */
+  const spokenAt = useRef(0);
+  const reacting = useRef(false);
   const { scene, animations } = useGLTF(MODEL);
 
   useEffect(() => {
@@ -120,18 +151,44 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     parent.add(model);
 
     const mixer = new AnimationMixer(model);
-    const clip = AnimationClip.findByName(animations, CLIP);
-    if (clip) {
-      mixer.clipAction(clip).play();
+
+    const idleClip = AnimationClip.findByName(animations, CLIP);
+    let idle: AnimationAction | null = null;
+    if (idleClip) {
+      idle = mixer.clipAction(idleClip);
+      idle.play();
       // Desync the row: without this all five breathe in lockstep, which
       // reads as one puppet copied five times.
-      mixer.setTime(seed * clip.duration);
+      mixer.setTime(seed * idleClip.duration);
     }
 
-    rig.current = { mixer, glow };
+    // One-shot reaction clips. They clamp on the last frame and are faded
+    // back to idle by the mixer's finished event, so a verdict produces a
+    // gesture rather than a permanent pose.
+    const reactions: Partial<Record<Stance, AnimationAction>> = {};
+    for (const [stance, name] of Object.entries(REACTION) as [Stance, string][]) {
+      const clip = AnimationClip.findByName(animations, name);
+      if (!clip) continue;
+      const action = mixer.clipAction(clip);
+      action.setLoop(LoopOnce, 1);
+      action.clampWhenFinished = true;
+      reactions[stance] = action;
+    }
+
+    const onFinished = () => {
+      const current = rig.current;
+      if (!current) return;
+      reacting.current = false;
+      for (const action of Object.values(current.reactions)) action?.fadeOut(0.35);
+      current.idle?.reset().fadeIn(0.35).play();
+    };
+    mixer.addEventListener("finished", onFinished);
+
+    rig.current = { mixer, glow, idle, reactions };
 
     return () => {
       rig.current = null;
+      mixer.removeEventListener("finished", onFinished);
       mixer.stopAllAction();
       mixer.uncacheRoot(model);
       parent.remove(model);
@@ -139,17 +196,50 @@ export function RobotTrader({ seed, symbolId, sentimentRef }: RobotTraderProps) 
     };
   }, [scene, animations, seed]);
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     const current = rig.current;
     if (!current) return;
 
     const change = sentimentRef.current?.[symbolId] ?? 0;
     // A moving instrument makes its trader restless.
     const urgency = Math.min(1.9, 1 + Math.abs(change) * 0.35);
-    current.mixer.update(delta * (0.82 + seed * 0.34) * urgency);
+    // Reactions play at their own pace; only the idle loop is rate-scaled.
+    const rate = reacting.current ? 1 : (0.82 + seed * 0.34) * urgency;
+    current.mixer.update(delta * rate);
 
-    const tint = change < 0 ? DOWN : UP;
-    for (const material of current.glow) material.emissive.lerp(tint, 0.06);
+    // getState rather than a subscription: this runs every frame anyway, and
+    // a verdict landing must not re-render the 3D tree.
+    const agent = agentOf(useAgentStore.getState().agents, symbolId);
+
+    if (agent.decidedAt > spokenAt.current) {
+      spokenAt.current = agent.decidedAt;
+      const action = current.reactions[agent.stance];
+      if (action) {
+        reacting.current = true;
+        current.idle?.fadeOut(0.25);
+        action.reset().setEffectiveWeight(1).fadeIn(0.25).play();
+      }
+    }
+
+    let tint: Color;
+    if (agent.phase === "offline") tint = OFFLINE;
+    else if (agent.phase === "thinking") tint = THINKING;
+    else if (agent.phase === "spoken") tint = STANCE_COLOUR[agent.stance];
+    else tint = STANCE_COLOUR.flat;
+
+    // A thinking agent pulses; a settled one burns steady. The pulse is baked
+    // into the emissive colour rather than emissiveIntensity — the intensity
+    // is a plain property, and assigning to one on a material the effect owns
+    // is exactly the kind of mutation the compiler rules refuse.
+    const thinking = agent.phase === "thinking";
+    const pulse = thinking
+      ? 0.5 + Math.abs(Math.sin(clock.elapsedTime * 4 + seed * 6)) * 0.85
+      : 1;
+    TARGET.copy(tint).multiplyScalar(pulse);
+
+    for (const material of current.glow) {
+      material.emissive.lerp(TARGET, thinking ? 0.2 : 0.06);
+    }
   });
 
   return <group ref={host} scale={SCALE} rotation={[0, Math.PI, 0]} />;

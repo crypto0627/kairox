@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { useMarketFeed } from "@/lib/market/useMarketFeed";
+import { useAgentFloor } from "@/lib/agent/useAgentFloor";
 
 const Scene = dynamic(() => import("./Scene").then((m) => m.Scene), {
   ssr: false,
@@ -18,6 +19,8 @@ const Scene = dynamic(() => import("./Scene").then((m) => m.Scene), {
 export function SceneCanvas() {
   // The feed lives here so it shares the component's lifetime with the scene.
   useMarketFeed();
+  // …and the agents that read it.
+  useAgentFloor();
 
   return (
     <div className="absolute inset-0 z-0">

@@ -77,6 +77,37 @@ Audio never autoplays: browsers block it until the user interacts. The app
 starts silent, the button pulses as an invitation, and the first click
 anywhere on the page starts the track unless the user muted it before.
 
+### The agent floor
+
+Each robot owns one instrument and actually reports on it. Every few minutes
+its window of bars goes to a model, which answers with a stance, a confidence,
+a headline and the one thing that would break the call. The verdict drives the
+trader's visor colour and a reaction gesture from the rig's own clip set, and
+lands in Postgres so the call can be graded later against what the price
+actually did.
+
+Providers sit behind one interface, the same shape the market layer uses:
+`ollama` runs a local model for development, and a hosted model swaps in
+without touching the prompt, the schema or the normalisation — which is the
+point, because otherwise the two are not comparable.
+
+```bash
+brew install ollama && brew services start ollama
+ollama pull llama3.1:8b
+pnpm db:up && pnpm db:push
+```
+
+Two rules the layer is built around:
+
+- **A verdict records the feed it was made on.** A call against the simulated
+  walk cannot be scored against one made on a live feed, and the accuracy
+  query excludes it rather than quietly inflating the number. The agent is
+  told when its data is synthetic and says so in its headline.
+- **Repeat calls inside a cooldown window are coalesced server-side.** A
+  StrictMode double-mount put nine rows in the log for five instruments; two
+  tabs would do the same. The client guards itself as well, but the client is
+  not what can be trusted with the bill.
+
 ## Architecture notes
 
 - **The canvas lives in the layout, not a page.** `app/(shell)/layout.tsx`
