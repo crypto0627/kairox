@@ -53,12 +53,18 @@ const STATUS_LABEL: Record<FeedStatus, { text: string; colour: string }> = {
   closed: { text: "OFFLINE", colour: INK_DIM },
 };
 
-/** Round a raw axis step up to the nearest 1, 2 or 5 times a power of ten. */
+/**
+ * Round a raw axis step up to a readable one. The 2.5 rung matters: without
+ * it the ladder jumps 2 → 5, which overshoots badly enough to squash the
+ * candles into the middle third of the panel.
+ */
+const STEP_LADDER = [1, 2, 2.5, 5, 10];
+
 function niceStep(raw: number): number {
   if (!(raw > 0) || !Number.isFinite(raw)) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(raw));
   const normalised = raw / magnitude;
-  const snapped = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  const snapped = STEP_LADDER.find((rung) => normalised <= rung) ?? 10;
   return snapped * magnitude;
 }
 
@@ -121,8 +127,10 @@ export function createHoloChart(spec: SymbolSpec): HoloChart {
 
     // --- panel ground: translucent, so the room shows through the glass ---
     const bg = ctx.createLinearGradient(0, 0, 0, PANEL_H);
-    bg.addColorStop(0, "rgba(9, 16, 30, 0.90)");
-    bg.addColorStop(1, "rgba(5, 7, 14, 0.82)");
+    // Opaque enough to read a candle against a lit skyline, sheer enough to
+    // still be glass. At 0.82 the city's windows showed through the plot.
+    bg.addColorStop(0, "rgba(9, 16, 30, 0.95)");
+    bg.addColorStop(1, "rgba(5, 7, 14, 0.91)");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, PANEL_W, PANEL_H);
 
@@ -278,7 +286,7 @@ export function createHoloChart(spec: SymbolSpec): HoloChart {
       const span = Math.max(natural, Math.abs(mid) * 0.0008);
       // Snap the bounds outward to a round step so the gridlines carry whole
       // numbers instead of whatever the padding happened to produce.
-      const step = Math.max(niceStep((span * 1.28) / 3), 10 ** -spec.precision);
+      const step = Math.max(niceStep(span / 4), 10 ** -spec.precision);
       const lo = Math.floor((mid - span / 2) / step) * step;
       const hi = Math.ceil((mid + span / 2) / step) * step;
 
