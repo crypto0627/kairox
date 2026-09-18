@@ -5,7 +5,26 @@ Nothing with an unclear licence ships.
 
 | File | Source | Author | Licence | Downloaded |
 | --- | --- | --- | --- | --- |
-| _(none yet)_ | | | | |
+| `public/audio/synthwave-house-loop.webm` + `.mp3` | [OpenGameArt — Synthwave House Loop](https://opengameart.org/content/synthwave-house-loop) | Fupi | CC0 1.0 (public domain, no attribution required) | 2026-09-18 |
+
+## Audio provenance
+
+The track the original spec named — "Shuttle Departure" by Apesaw — was
+**not** used: its only traceable distribution is social-media music
+libraries, whose grant does not cover continuous streaming from your own
+site. No verifiable web-embedding licence, so it does not ship.
+
+The CC0 replacement above is a 20-bar loop at 95 BPM (50.526 s), which is an
+exact musical cycle — no trimming was needed. Re-create the shipped files
+from the CC0 WAV with:
+
+```bash
+curl -L -o src.wav https://opengameart.org/sites/default/files/synthwavehouse.wav
+ffmpeg -i src.wav -vn -c:a libopus    -b:a  96k -application audio synthwave-house-loop.webm
+ffmpeg -i src.wav -vn -c:a libmp3lame -b:a 128k                    synthwave-house-loop.mp3
+```
+
+Shipped size: 683 KB + 791 KB = **1.44 MB**, inside the 3 MB audio budget.
 
 ## Where assets come from
 

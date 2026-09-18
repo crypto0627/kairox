@@ -14,7 +14,7 @@ import { SceneCanvas } from "@/components/three/SceneCanvas";
  */
 export default function ShellLayout({ children }: { children: ReactNode }) {
   return (
-    <AudioProvider src="/audio/shuttle-departure">
+    <AudioProvider src="/audio/synthwave-house-loop">
       <div className="relative h-dvh w-dvw overflow-hidden bg-void">
         {/* z-0 — the 3D room */}
         <SceneCanvas />

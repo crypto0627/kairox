@@ -53,10 +53,13 @@ tab and the data is gone.
 
 ### Background music
 
-Drop the licensed audio files into `public/audio/`. See
-`public/audio/README.md` — **confirm the licence covers web embedding first**.
-The app runs without them; the toggle detects the missing file and disables
-itself.
+Ships with **"Synthwave House Loop" by Fupi** (CC0 1.0, public domain) — a
+20-bar loop at 95 BPM, encoded to Opus/WebM 96k and MP3 128k, 1.44 MB for
+both. Registered in `ASSETS.md`; see `public/audio/README.md` to swap it.
+
+The files are gitignored, so a fresh clone has no sound until you re-run the
+two ffmpeg commands in `ASSETS.md`. The app runs fine either way — the
+toggle detects the missing file and disables itself.
 
 Audio never autoplays: browsers block it until the user interacts. The app
 starts silent, the button pulses as an invitation, and the first click
