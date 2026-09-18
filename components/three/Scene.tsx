@@ -7,6 +7,9 @@ import { usePathname } from "next/navigation";
 import { Vector3 } from "three";
 import { Workstation } from "./Workstation";
 import { ScreenArray } from "./ScreenArray";
+import { Room } from "./Room";
+import { CityScape } from "./CityScape";
+import { Rain } from "./Rain";
 import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
 
@@ -54,7 +57,10 @@ export function Scene() {
   return (
     <>
       <color attach="background" args={["#05060b"]} />
-      <fogExp2 attach="fog" args={["#070a16", 0.032]} />
+      {/* Tuned for the skyline, not the room: exp² fog squares with distance,
+          so anything dense enough to haze a 20-unit room erases a 200-unit
+          city. The room gets its atmosphere from the neon instead. */}
+      <fogExp2 attach="fog" args={["#070a16", 0.0062]} />
 
       <hemisphereLight args={["#1b2a44", "#05060b", 0.35]} />
       <ambientLight intensity={0.12} />
@@ -69,21 +75,9 @@ export function Scene() {
       <pointLight position={[5.5, 1.6, 2]} intensity={9} distance={12} color="#ff2e88" />
       <pointLight position={[-5.5, 1.6, 2]} intensity={7} distance={12} color="#8b5cf6" />
 
-      {/* floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#070a10" metalness={0.65} roughness={0.42} />
-      </mesh>
-
-      {/* back wall — stands in for the window wall until Phase 4 */}
-      <mesh position={[0, 3.4, -9]}>
-        <planeGeometry args={[26, 9]} />
-        <meshStandardMaterial color="#070b14" metalness={0.3} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 6.3, -8.95]}>
-        <planeGeometry args={[22, 0.04]} />
-        <meshBasicMaterial color="#00e5ff" toneMapped={false} />
-      </mesh>
+      <CityScape />
+      <Rain />
+      <Room />
 
       <ScreenArray />
 

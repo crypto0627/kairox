@@ -24,7 +24,7 @@ export function SceneCanvas() {
       <Canvas
         shadows
         dpr={[1, 1.75]}
-        camera={{ position: [0, 3.2, 11], fov: 42, near: 0.1, far: 120 }}
+        camera={{ position: [0, 3.2, 11], fov: 42, near: 0.1, far: 340 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {
           gl.toneMapping = ACESFilmicToneMapping;

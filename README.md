@@ -7,26 +7,30 @@ glassmorphic sidebar over the whole scene.
 Built with Next.js 16 (App Router), React Three Fiber v9, Tailwind CSS v4 and
 Apache ECharts 6.
 
-## Status — Phases 1 to 3 complete
+## Status — Phases 1 to 4 complete
 
 | Phase | State |
 | --- | --- |
 | 1 — Shell, sidebar, music toggle, persistent canvas | done |
 | 2 — Data layer: Binance WS, Finnhub adapter, 5s throttle, store | done |
 | 3 — ECharts → CanvasTexture on the holo panels | done |
-| 4 — The room: window wall, rain, city skyline (the array landed in 3) | not started |
+| 4 — The room: window wall, rain, city skyline | done |
 | 5 — Mixamo GLTF robots, lighting rig, post-processing | not started |
 | 6 — Polish, error boundaries, fallbacks | not started |
 
 What runs today: the shell with all four routes, the glass sidebar, the
 always-on-top music toggle, a five-screen holo array carrying live ECharts
-candlesticks, five procedural robot workstations below it, and a compact DOM
-ticker tape along the bottom.
+candlesticks, five procedural robot workstations below it, a compact DOM
+ticker tape along the bottom, and the room they all sit in — grid floor,
+glazed window wall, rain, and a night skyline beyond it.
 
-The panels plot a rolling 40-bar window of one-minute candles built from the
-live feed. Nothing is back-filled, so a fresh tab starts empty and the panels
-say so — `AWAITING FIRST TICK`, then `BUILDING FIRST BARS` — until the second
-bar closes about a minute in.
+The panels plot a rolling 40-bar window of one-minute candles. BTC's window
+is back-filled from Binance's REST klines, so it is full a second after the
+page opens; the simulated symbols generate their own back-history, which is
+consistent rather than invented — they are already labelled `SIMULATED` in
+amber. A live Finnhub feed has no history source on the free tier, so those
+panels build from ticks and say so: `AWAITING FIRST TICK`, then
+`BUILDING FIRST BARS`.
 
 ## Getting started
 
@@ -54,8 +58,9 @@ Indices are tracked through liquid ETF proxies (`SPY`, `SOXX`, `GLD`) because
 Finnhub's free tier does not stream index symbols. Each panel shows a small
 `via SPY` note rather than hiding the substitution.
 
-Nothing is persisted. No database, no cache, no history replay — close the
-tab and the data is gone.
+Nothing is persisted. The back-fill is re-fetched on every load, and the
+rolling window lives in memory — no database, no cache, close the tab and the
+data is gone.
 
 ### Background music
 
@@ -92,6 +97,13 @@ anywhere on the page starts the track unless the user muted it before.
 - **ECharts creates its canvas on the first `setOption`, not on `init`** — at
   least on a detached container. Resolving it once up front captures `null`
   forever, which is why `holoChart` looks it up lazily.
+- **The city is three InstancedMeshes, not one.** A single instanced mesh
+  shares one set of UVs, so a 15-unit block and a 90-unit tower would stretch
+  the same window sheet by 6×. Splitting into height classes keeps the window
+  rows roughly square for a few hundred buildings across three draw calls.
+- **Fog is tuned for the skyline, not the room.** `fogExp2` squares with
+  distance, so any density thick enough to haze a 20-unit room erases a
+  200-unit city. The room takes its atmosphere from the neon instead.
 - **`RobotTrader` is a placeholder behind a stable prop shape.** Phase 5
   replaces the procedural body with a Mixamo GLTF (`useGLTF` +
   `SkeletonUtils.clone()` + `useAnimations`) without touching `Workstation`.
