@@ -31,8 +31,8 @@ export interface VerdictHoloProps {
  */
 export function VerdictHolo({
   symbolId,
-  width = 1.78,
-  position = [0, 2.3, -0.5],
+  width = 2.15,
+  position = [0, 2.45, -0.45],
 }: VerdictHoloProps) {
   const mesh = useRef<Mesh>(null);
   const material = useRef<MeshBasicMaterial>(null);

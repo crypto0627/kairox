@@ -4,6 +4,7 @@ import { Suspense, type RefObject } from "react";
 import { RoundedBox } from "@react-three/drei";
 import { RobotTrader } from "./RobotTrader";
 import { VerdictHolo } from "./VerdictHolo";
+import { useAgentStore } from "@/lib/store/agentStore";
 
 export interface WorkstationProps {
   seed: number;
@@ -126,6 +127,29 @@ export function Workstation({
       <mesh position={[-0.62, 0.5, -0.42]} rotation={[0.12, 0, 0.2]}>
         <cylinderGeometry args={[0.014, 0.014, 0.95, 6]} />
         <meshStandardMaterial color="#05080c" metalness={0.3} roughness={0.9} />
+      </mesh>
+
+      {/* Click target: one generous invisible box over the trader and its
+          console. Raycasting the GLTF's own meshes would work but gives a
+          fiddly hit area shaped like a robot, and the desk should select the
+          agent too. Opacity zero rather than visible={false}, which is not
+          reliably raycast. */}
+      <mesh
+        position={[0, 1.15, -0.4]}
+        onClick={(event) => {
+          event.stopPropagation();
+          useAgentStore.getState().select(symbolId);
+        }}
+        onPointerOver={(event) => {
+          event.stopPropagation();
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = "";
+        }}
+      >
+        <boxGeometry args={[2.1, 2.7, 1.7]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
       {/* What this agent currently thinks, hanging above its head. */}

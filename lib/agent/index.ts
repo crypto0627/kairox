@@ -109,10 +109,11 @@ export interface AnalyseOutcome {
 export async function analyse(
   request: VerdictRequest,
   hourlyCap = Number.POSITIVE_INFINITY,
+  force = false,
 ): Promise<AnalyseOutcome> {
   const key = request.spec.id;
   const existing = inFlight.get(key);
-  if (existing && Date.now() - existing.at < COOLDOWN_MS) {
+  if (!force && existing && Date.now() - existing.at < COOLDOWN_MS) {
     // A coalesced answer costs nothing, so it is not counted against the cap.
     return { result: await existing.work, cached: true };
   }

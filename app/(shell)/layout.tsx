@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AudioProvider } from "@/lib/audio/AudioProvider";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { MusicToggle } from "@/components/ui/MusicToggle";
+import { AgentInspector } from "@/components/ui/AgentInspector";
 import { SceneCanvas } from "@/components/three/SceneCanvas";
 
 /**
@@ -27,6 +28,9 @@ export default function ShellLayout({ children }: { children: ReactNode }) {
 
         {/* z-20 — navigation */}
         <Sidebar />
+
+        {/* z-30 — the agent you clicked on the floor */}
+        <AgentInspector />
 
         {/* z-50 — above everything, on every page */}
         <MusicToggle />

@@ -34,6 +34,9 @@ const EMPTY: AgentState = {
 
 interface AgentStore {
   agents: Record<string, AgentState>;
+  /** The trader the user has clicked, or null. Drives the DOM inspector. */
+  selected: string | null;
+  select: (symbolId: string | null) => void;
   setPhase: (symbolId: string, phase: AgentPhase) => void;
   setVerdict: (symbolId: string, verdict: Partial<AgentState>) => void;
   setError: (symbolId: string, error: string) => void;
@@ -48,6 +51,10 @@ interface AgentStore {
  */
 export const useAgentStore = create<AgentStore>((set) => ({
   agents: {},
+  selected: null,
+
+  select: (symbolId) =>
+    set((state) => ({ selected: state.selected === symbolId ? null : symbolId })),
 
   setPhase: (symbolId, phase) =>
     set((state) => ({

@@ -120,7 +120,14 @@ export async function POST(request: Request) {
 
   let outcome;
   try {
-    outcome = await analyse({ spec, bars, quote, status, persona }, hourlyCap);
+    // A person who clicked "analyse now" is asking for a fresh read, so the
+    // coalescing window is skipped for them. The hourly cap is not — that one
+    // exists precisely to survive impatience.
+    outcome = await analyse(
+      { spec, bars, quote, status, persona },
+      hourlyCap,
+      body.force === true,
+    );
   } catch (error) {
     if (error instanceof CapReached) {
       // Not a failure. The floor asked for more thinking than its budget
