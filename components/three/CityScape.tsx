@@ -178,7 +178,7 @@ function SignStrips() {
           z + 7,
         ],
         rotation: [0, (random() - 0.5) * 0.5, 0],
-        size: [height * 0.17, height],
+        size: [height * 0.22, height],
         variant: Math.floor(random() * 5),
       };
     });
@@ -330,7 +330,7 @@ function HoloAd({
       <meshBasicMaterial
         map={texture}
         transparent
-        opacity={0.78}
+        opacity={0.42}
         blending={AdditiveBlending}
         depthWrite={false}
         side={DoubleSide}
@@ -366,11 +366,15 @@ export function CityScape() {
       <SignStrips />
       <WarningLights />
       <AirTraffic />
-      {/* In the open air between the glass and the first towers. Anywhere
+      {/* In the open air between the glass and the first towers — anywhere
           inside the band and the skyline occludes it, which is the one thing
-          a landmark hologram must never be. */}
-      <HoloAd position={[-23, 12, -66]} size={[16, 22]} sway={0} />
-      <HoloAd position={[27, 14, -72]} size={[14, 19]} sway={2.1} />
+          a landmark hologram must never be.
+          Pushed wide and dimmed once the signage became readable Chinese:
+          abstract rings sat behind the panel array as texture, but bold
+          characters in the same place read as foreground and fought the
+          prices for the middle of the frame. */}
+      <HoloAd position={[-38, 15, -74]} size={[19, 26]} sway={0} />
+      <HoloAd position={[42, 17, -80]} size={[17, 23]} sway={2.1} />
     </group>
   );
 }

@@ -148,19 +148,25 @@ Three rules the layer is built around:
 
 ### The building
 
-Routes were already camera positions, so they became storeys. `/` and the
-document pages stand on the trading floor; `/pit` is one floor up, and
-changing route rides the camera through the shaft rather than cutting. There
-is no movement system — the sidebar is still how you get around, which is also
-why this works on a phone and from a keyboard.
+Every sidebar entry is a storey, in the order it is listed. The trading floor
+is the top; the Pit, Briefing, Archive and Ops descend from it. Changing route
+rides the camera through the shaft rather than cutting, and the up and down
+arrows call the lift — guarded so an arrow inside a form field belongs to the
+field, and so two quick presses do not both read the old floor and compute the
+same destination.
+
+The trading floor stays at zero and everything else goes below it. It is the
+top floor either way, and it is the only storey with a window: the skyline's
+height, the fog and where the rain falls are all built around standing at
+street level, so lifting it seventy units would have put the camera above the
+city it was framed to look at.
 
 Each storey owns its own orbit limits. They used to be global and tuned for
-the trading floor, and the Pit's camera sits eighteen units from its target,
-so OrbitControls was silently clamping it to fifteen and pulling against the
-lerp every frame.
+the trading floor, so the Pit's camera — eighteen units from its target — was
+silently clamped to fifteen and pulled against the lerp every frame.
 
-The Pit's geometry is a dynamic import mounted only while you are on it, so
-the floor below never pays for a room nobody is in.
+Every storey but the trading floor is a dynamic import mounted only while you
+are standing on it.
 
 ### The Pit
 
@@ -173,6 +179,18 @@ implied.
 Binance's depth stream feeds it, with a REST poll as fallback: the socket
 drops regularly on some networks while plain REST to the same host answers
 fine, and a book two seconds stale still shows where the liquidity is.
+
+It is laid out to be stood in. The book is sunk in a shallow well you read
+over a rail, and the wall hangs above it at the height a wall of screens is.
+Two earlier arrangements did not work: at book height the order walls filled
+the frame and buried the intel behind them, and pressed up against the wall
+the panels were readable but the pit they hang over was gone.
+
+The well is shallow for a reason. Both sides of the book share one
+normalisation — that is the point, it is how you see which side is heavier —
+so when one is a third of the other the short wall is genuinely short. Sunk
+three units and sat at the near end, the rim cut the sight line above it and
+that whole side of the market simply vanished.
 
 Behind it, four panels of daily context:
 

@@ -8,10 +8,12 @@ import { step } from "@/lib/three/environment";
 
 const LEVELS = 20;
 /** Spacing between price levels along x. */
-const STEP = 0.34;
-const WIDTH = 0.28;
-const DEPTH = 1.5;
-const MAX_HEIGHT = 3.1;
+const STEP = 0.235;
+const WIDTH = 0.19;
+const DEPTH = 1.25;
+/** Tops out below the rail, so the deepest level never climbs over the
+ *  rim and starts covering the wall behind it. */
+const MAX_HEIGHT = 1.8;
 /** How fast a wall grows or collapses toward the book. */
 const EASE = 7;
 
@@ -89,8 +91,6 @@ export function DepthCanyon() {
           emissiveIntensity={0.45}
           metalness={0.3}
           roughness={0.35}
-          transparent
-          opacity={0.88}
         />
       </instancedMesh>
 
@@ -102,8 +102,6 @@ export function DepthCanyon() {
           emissiveIntensity={0.45}
           metalness={0.3}
           roughness={0.35}
-          transparent
-          opacity={0.88}
         />
       </instancedMesh>
 

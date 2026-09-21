@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { useMarketFeed } from "@/lib/market/useMarketFeed";
 import { useIsVisible } from "@/lib/three/environment";
+import { useFloorKeys } from "@/lib/scene/useFloorKeys";
 import { SceneBoundary } from "./SceneBoundary";
 import { useVerdictScoring } from "@/lib/agent/useAgentFloor";
 
@@ -23,6 +24,8 @@ export function SceneCanvas() {
   useMarketFeed();
   // Agents only speak when asked; this just grades what they said.
   useVerdictScoring();
+  // Up and down ride the lift.
+  useFloorKeys();
 
   // A hidden tab has no reason to render rain. The sockets stay open and the
   // store keeps filling — only the draw loop stops — so switching back shows

@@ -1,7 +1,7 @@
 import { CanvasTexture, SRGBColorSpace } from "three";
 
-export const W = 896;
-export const H = 560;
+export const W = 1024;
+export const H = 640;
 
 const DISPLAY = '"DIN Alternate", "Bahnschrift", "Avenir Next Condensed", system-ui, sans-serif';
 const MONO = '"SF Mono", Menlo, Consolas, ui-monospace, monospace';
@@ -31,32 +31,32 @@ function shell(ctx: CanvasRenderingContext2D, title: string, subtitle: string) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.letterSpacing = "6px";
-  ctx.font = `30px ${DISPLAY}`;
+  ctx.letterSpacing = "9px";
+  ctx.font = `46px ${DISPLAY}`;
   ctx.fillStyle = INK;
-  ctx.fillText(title.toUpperCase(), 32, 54);
+  ctx.fillText(title.toUpperCase(), 36, 70);
   ctx.letterSpacing = "0px";
 
-  ctx.font = `17px ${MONO}`;
+  ctx.font = `25px ${MONO}`;
   ctx.fillStyle = DIM;
-  ctx.fillText(subtitle, 32, 82);
+  ctx.fillText(subtitle, 36, 106);
 
   ctx.strokeStyle = "rgba(0, 229, 255, 0.3)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(32, 100.5);
-  ctx.lineTo(W - 32, 100.5);
+  ctx.moveTo(36, 128.5);
+  ctx.lineTo(W - 36, 128.5);
   ctx.stroke();
 
   ctx.strokeStyle = "rgba(0, 229, 255, 0.34)";
   ctx.lineWidth = 3;
   ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
 
-  return { x: 40, y: 130, w: W - 80, h: H - 200 };
+  return { x: 44, y: 162, w: W - 88, h: H - 246 };
 }
 
 function unavailable(ctx: CanvasRenderingContext2D, why: string) {
-  ctx.font = `20px ${MONO}`;
+  ctx.font = `30px ${MONO}`;
   ctx.fillStyle = AMBER;
   ctx.textAlign = "center";
   ctx.fillText(why, W / 2, H / 2);
@@ -120,11 +120,11 @@ export function drawEtf(canvas: HTMLCanvasElement, days: EtfDay[] | null) {
   });
   ctx.globalAlpha = 1;
 
-  ctx.font = `15px ${MONO}`;
+  ctx.font = `22px ${MONO}`;
   ctx.fillStyle = DIM;
-  ctx.fillText(days[0].date, plot.x, plot.y + plot.h + 26);
+  ctx.fillText(days[0].date, plot.x, plot.y + plot.h + 36);
   ctx.textAlign = "right";
-  ctx.fillText(`${days.length} sessions · cum ${money(latest!.cumulative)}`, plot.x + plot.w, plot.y + plot.h + 26);
+  ctx.fillText(`${days.length} sessions · cum ${money(latest!.cumulative)}`, plot.x + plot.w, plot.y + plot.h + 36);
   ctx.textAlign = "left";
 }
 
@@ -141,13 +141,13 @@ export function drawSentiment(canvas: HTMLCanvasElement, s: Sentiment | null) {
   const plot = shell(ctx, "Fear & Greed", s ? `today · ${s.label}` : "crypto sentiment");
   if (!s) return unavailable(ctx, "sentiment unavailable");
 
-  const cx = plot.x + 150;
-  const cy = plot.y + 150;
-  const radius = 108;
+  const cx = plot.x + 172;
+  const cy = plot.y + 168;
+  const radius = 124;
   const start = Math.PI * 0.75;
   const sweep = Math.PI * 1.5;
 
-  ctx.lineWidth = 22;
+  ctx.lineWidth = 27;
   ctx.lineCap = "round";
   ctx.strokeStyle = "rgba(125, 153, 168, 0.18)";
   ctx.beginPath();
@@ -163,19 +163,19 @@ export function drawSentiment(canvas: HTMLCanvasElement, s: Sentiment | null) {
   ctx.stroke();
 
   ctx.textAlign = "center";
-  ctx.font = `64px ${DISPLAY}`;
+  ctx.font = `92px ${DISPLAY}`;
   ctx.fillStyle = INK;
-  ctx.fillText(String(s.value), cx, cy + 14);
-  ctx.font = `18px ${MONO}`;
+  ctx.fillText(String(s.value), cx, cy + 20);
+  ctx.font = `26px ${MONO}`;
   ctx.fillStyle = tint;
-  ctx.fillText(s.label.toUpperCase(), cx, cy + 46);
+  ctx.fillText(s.label.toUpperCase(), cx, cy + 60);
   ctx.textAlign = "left";
 
   // Thirty days beside it, so today has somewhere to sit.
-  const hx = plot.x + 330;
-  const hw = plot.w - 330;
-  const hy = plot.y + 60;
-  const hh = 150;
+  const hx = plot.x + 390;
+  const hw = plot.w - 390;
+  const hy = plot.y + 66;
+  const hh = 172;
   ctx.strokeStyle = "rgba(125, 153, 168, 0.22)";
   ctx.lineWidth = 1;
   for (const level of [25, 50, 75]) {
@@ -195,9 +195,9 @@ export function drawSentiment(canvas: HTMLCanvasElement, s: Sentiment | null) {
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
-  ctx.font = `14px ${MONO}`;
+  ctx.font = `21px ${MONO}`;
   ctx.fillStyle = DIM;
-  ctx.fillText(`${s.history.length} days`, hx, hy + hh + 24);
+  ctx.fillText(`${s.history.length} days`, hx, hy + hh + 34);
 }
 
 export interface Indicators {
@@ -219,14 +219,14 @@ export function drawIndicators(canvas: HTMLCanvasElement, d: Indicators) {
   if (!d.macd || !d.rsi || !d.volume) return unavailable(ctx, "not enough daily history");
 
   // MACD histogram
-  ctx.font = `15px ${MONO}`;
+  ctx.font = `22px ${MONO}`;
   ctx.fillStyle = DIM;
-  ctx.fillText("MACD 12/26/9", plot.x, plot.y + 4);
+  ctx.fillText("MACD 12/26/9", plot.x, plot.y + 6);
 
   const hx = plot.x;
-  const hy = plot.y + 20;
+  const hy = plot.y + 26;
   const hw = plot.w;
-  const hh = 120;
+  const hh = 140;
   const zero = hy + hh / 2;
   const peak = Math.max(...d.macd.history.map(Math.abs), 1);
   const barW = hw / d.macd.history.length;
@@ -244,24 +244,24 @@ export function drawIndicators(canvas: HTMLCanvasElement, d: Indicators) {
     ctx.fillRect(hx + i * barW + 1, value >= 0 ? zero - height : zero, Math.max(2, barW - 2), height);
   });
 
-  ctx.font = `16px ${MONO}`;
+  ctx.font = `24px ${MONO}`;
   ctx.fillStyle = d.macd.histogram >= 0 ? UP : DOWN;
   ctx.textAlign = "right";
   ctx.fillText(
     `${d.macd.histogram >= 0 ? "+" : ""}${d.macd.histogram.toFixed(0)}`,
     hx + hw,
-    hy + hh + 22,
+    hy + hh + 32,
   );
   ctx.textAlign = "left";
 
   // RSI as a band, because 30 and 70 are the only numbers anyone reads it for
-  const ry = hy + hh + 52;
-  ctx.font = `15px ${MONO}`;
+  const ry = hy + hh + 74;
+  ctx.font = `22px ${MONO}`;
   ctx.fillStyle = DIM;
   ctx.fillText("RSI 14", plot.x, ry);
 
-  const barY = ry + 16;
-  const barH = 26;
+  const barY = ry + 20;
+  const barH = 34;
   ctx.fillStyle = "rgba(125, 153, 168, 0.16)";
   ctx.fillRect(plot.x, barY, plot.w, barH);
   ctx.fillStyle = "rgba(255, 46, 136, 0.14)";
@@ -272,24 +272,24 @@ export function drawIndicators(canvas: HTMLCanvasElement, d: Indicators) {
   const marker = plot.x + (d.rsi.value / 100) * plot.w;
   ctx.fillStyle = d.rsi.value > 70 ? UP : d.rsi.value < 30 ? DOWN : CYAN;
   ctx.fillRect(marker - 2, barY - 5, 4, barH + 10);
-  ctx.font = `17px ${MONO}`;
+  ctx.font = `25px ${MONO}`;
   ctx.fillStyle = INK;
-  ctx.fillText(d.rsi.value.toFixed(1), Math.min(marker + 10, plot.x + plot.w - 52), barY + 19);
+  ctx.fillText(d.rsi.value.toFixed(1), Math.min(marker + 14, plot.x + plot.w - 78), barY + 25);
 
   // Volume against its own 20-day average
-  const vy = barY + barH + 42;
-  ctx.font = `15px ${MONO}`;
+  const vy = barY + barH + 56;
+  ctx.font = `22px ${MONO}`;
   ctx.fillStyle = DIM;
   ctx.fillText("Volume vs 20d average", plot.x, vy);
-  ctx.font = `28px ${DISPLAY}`;
+  ctx.font = `44px ${DISPLAY}`;
   ctx.fillStyle = d.volume.ratio >= 1 ? UP : DIM;
-  ctx.fillText(`${d.volume.ratio.toFixed(2)}×`, plot.x, vy + 34);
-  ctx.font = `15px ${MONO}`;
+  ctx.fillText(`${d.volume.ratio.toFixed(2)}×`, plot.x, vy + 48);
+  ctx.font = `21px ${MONO}`;
   ctx.fillStyle = DIM;
   ctx.fillText(
-    `${d.volume.latest.toFixed(0)} BTC today · ${d.volume.average20.toFixed(0)} average`,
-    plot.x + 110,
-    vy + 32,
+    `${d.volume.latest.toFixed(0)} BTC today · ${d.volume.average20.toFixed(0)} avg`,
+    plot.x + 160,
+    vy + 44,
   );
 }
 
@@ -305,28 +305,28 @@ export function drawNews(canvas: HTMLCanvasElement, items: NewsItem[] | null) {
   const plot = shell(ctx, "Wire", items?.length ? `${items.length} stories` : "crypto headlines");
   if (!items?.length) return unavailable(ctx, "wire unavailable");
 
-  let y = plot.y + 14;
-  for (const item of items.slice(0, 6)) {
+  let y = plot.y + 22;
+  for (const item of items.slice(0, 4)) {
     const time = new Date(item.at).toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    ctx.font = `14px ${MONO}`;
+    ctx.font = `21px ${MONO}`;
     ctx.fillStyle = CYAN;
     ctx.fillText(time, plot.x, y);
     ctx.fillStyle = DIM;
-    ctx.fillText(item.source.slice(0, 18), plot.x + 56, y);
+    ctx.fillText(item.source.slice(0, 20), plot.x + 84, y);
 
-    ctx.font = `19px ${DISPLAY}`;
+    ctx.font = `30px ${DISPLAY}`;
     ctx.fillStyle = INK;
     // One line each; a wall panel is not the place to read a paragraph.
     let text = item.headline;
     while (text.length > 4 && ctx.measureText(text).width > plot.w) {
       text = text.slice(0, -2);
     }
-    ctx.fillText(text === item.headline ? text : `${text}…`, plot.x, y + 26);
+    ctx.fillText(text === item.headline ? text : `${text}…`, plot.x, y + 38);
 
-    y += 62;
+    y += 92;
   }
 }

@@ -19,12 +19,29 @@ import dynamic from "next/dynamic";
 const PitFloor = dynamic(() => import("./PitFloor").then((m) => m.PitFloor), {
   ssr: false,
 });
+const InteriorFloor = dynamic(
+  () => import("./InteriorFloor").then((m) => m.InteriorFloor),
+  { ssr: false },
+);
 import { CityScape } from "./CityScape";
 import { Rain } from "./Rain";
 import { Effects } from "./Effects";
 import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
-import { floorFor } from "@/lib/scene/floors";
+import { floorFor, STOREY } from "@/lib/scene/floors";
+import type { Dressing } from "./InteriorFloor";
+
+/** The storeys below the Pit, and how each one is dressed. */
+const LOWER_FLOORS: Array<{
+  path: string;
+  level: number;
+  accent: string;
+  dressing: Dressing;
+}> = [
+  { path: "/report", level: -STOREY * 2, accent: "#ff2e88", dressing: "briefing" },
+  { path: "/history", level: -STOREY * 3, accent: "#00e5b0", dressing: "archive" },
+  { path: "/profile", level: -STOREY * 4, accent: "#8b5cf6", dressing: "ops" },
+];
 
 /** Five seats on a shallow arc, mirroring the screen array above. */
 const SEATS = SYMBOLS.map((spec, i) => {
@@ -126,10 +143,24 @@ export function Scene() {
       <Room />
       <Interior />
 
+      {/* Only the storey you are standing on is built. The trading floor is
+          the exception — it is the one the lift passes through. */}
       {pathname === "/pit" && (
         <Suspense fallback={null}>
           <PitFloor />
         </Suspense>
+      )}
+      {LOWER_FLOORS.map(
+        (floor) =>
+          pathname === floor.path && (
+            <Suspense key={floor.path} fallback={null}>
+              <InteriorFloor
+                level={floor.level}
+                accent={floor.accent}
+                dressing={floor.dressing}
+              />
+            </Suspense>
+          ),
       )}
 
       <ScreenArray />

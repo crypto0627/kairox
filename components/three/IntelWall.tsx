@@ -15,10 +15,10 @@ import {
 /** Sources publish daily; the route caches, and this asks again occasionally. */
 const REFRESH_MS = 5 * 60_000;
 
-const PANEL_W = 4.4;
+const PANEL_W = 5.6;
 const PANEL_H = PANEL_W * (H / W);
-const GAP_X = 0.24;
-const GAP_Y = 0.22;
+const GAP_X = 0.3;
+const GAP_Y = 0.26;
 
 type Slot = "etf" | "sentiment" | "indicators" | "news";
 const SLOTS: Array<{ id: Slot; x: number; y: number }> = [

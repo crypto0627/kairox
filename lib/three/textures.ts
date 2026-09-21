@@ -127,32 +127,47 @@ const AD_SCHEMES: Array<[string, string]> = [
   ["#ffe14d", "#1a1502"],
 ];
 
-/** Draws a block of pseudo-writing: strokes on a grid, never real glyphs. */
-function drawGlyphs(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  cell: number,
-  colour: string,
-  random: () => number,
-) {
-  ctx.fillStyle = colour;
-  for (let gy = y; gy + cell <= y + h; gy += cell) {
-    for (let gx = x; gx + cell <= x + w; gx += cell) {
-      const strokes = 2 + Math.floor(random() * 4);
-      for (let i = 0; i < strokes; i++) {
-        const thick = Math.max(1, cell * 0.14);
-        if (random() < 0.5) {
-          ctx.fillRect(gx + cell * 0.15, gy + cell * (0.2 + random() * 0.6), cell * 0.7, thick);
-        } else {
-          ctx.fillRect(gx + cell * (0.2 + random() * 0.6), gy + cell * 0.15, thick, cell * 0.7);
-        }
-      }
-    }
-  }
-}
+/**
+ * CJK on a canvas needs a stack that actually resolves. Latin fallbacks are
+ * last so a machine without any of these still renders *something* rather
+ * than tofu boxes.
+ */
+const CJK = '"PingFang TC", "PingFang SC", "Hiragino Sans GB", "Heiti TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif';
+
+/**
+ * What the skyline advertises.
+ *
+ * Real words rather than the pseudo-glyph bars this drew before. Night City's
+ * loudest instrument is the corporate sign, and a sign nobody can read is
+ * just texture — the moment it says 加密貨幣交易所 the building has a tenant
+ * and the street has an economy.
+ */
+const BILLBOARDS: Array<[string, string]> = [
+  ["加密貨幣交易所", "24H 全天候結算"],
+  ["黃金交易所", "實物交割 · 保稅倉"],
+  ["美聯儲", "利率決議 即時發布"],
+  ["川普大樓", "頂層公寓 出售中"],
+  ["期貨交易所", "槓桿 125 倍"],
+  ["數據銀行", "記憶體託管"],
+  ["義體診所", "神經連結 免預約"],
+  ["量子運算中心", "算力出租"],
+  ["合成食品", "蛋白質配給"],
+  ["無人機配送", "十分鐘送達"],
+];
+
+/** Short enough to stack down a narrow column. */
+const VERTICAL_SIGNS = [
+  "黃金交易所",
+  "加密貨幣",
+  "美聯儲",
+  "川普大樓",
+  "義體診所",
+  "數據銀行",
+  "夜之城",
+  "量子運算",
+  "霓虹酒吧",
+  "腦機介面",
+];
 
 function seeded(seed: number) {
   let a = seed >>> 0;
@@ -164,17 +179,34 @@ function seeded(seed: number) {
   };
 }
 
+/** Shrink until it fits; a sign that overflows its own board reads as a bug. */
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  startPx: number,
+): number {
+  let size = startPx;
+  ctx.font = `${size}px ${CJK}`;
+  while (size > 10 && ctx.measureText(text).width > maxWidth) {
+    size -= 2;
+    ctx.font = `${size}px ${CJK}`;
+  }
+  return size;
+}
+
 const adCache = new Map<number, Texture>();
 
-/** A wide commercial panel: colour field, a headline band, a block of text. */
+/** A wide commercial panel: colour field, the tenant's name, a strapline. */
 export function adTexture(variant: number): Texture {
   const cached = adCache.get(variant);
   if (cached) return cached;
 
   const random = seeded(0xad0000 + variant);
   const [ink, ground] = AD_SCHEMES[variant % AD_SCHEMES.length];
-  const W = 256;
-  const H = 160;
+  const [name, strap] = BILLBOARDS[variant % BILLBOARDS.length];
+  const W = 320;
+  const H = 180;
   const [el, ctx] = canvas(W, H);
 
   ctx.fillStyle = ground;
@@ -182,22 +214,33 @@ export function adTexture(variant: number): Texture {
 
   // headline band
   ctx.fillStyle = ink;
-  ctx.globalAlpha = 0.92;
-  ctx.fillRect(14, 16, W - 28, 30);
+  ctx.globalAlpha = 0.9;
+  ctx.fillRect(12, 20, W - 24, 78);
   ctx.globalAlpha = 1;
-  drawGlyphs(ctx, 22, 20, W - 44, 22, 22, ground, random);
 
-  // body text
-  drawGlyphs(ctx, 18, 62, W - 36, 56, 14, ink, random);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = ground;
+  const size = fitText(ctx, name, W - 44, 58);
+  ctx.font = `${size}px ${CJK}`;
+  ctx.fillText(name, W / 2, 60);
 
-  // a rule and a mark, because every ad has a logo in the corner
   ctx.fillStyle = ink;
-  ctx.fillRect(18, 128, W - 36, 2);
+  const strapSize = fitText(ctx, strap, W - 40, 30);
+  ctx.font = `${strapSize}px ${CJK}`;
+  ctx.fillText(strap, W / 2, 124);
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  ctx.fillStyle = ink;
+  ctx.fillRect(18, 150, W - 36, 3);
   ctx.globalAlpha = 0.85;
   ctx.beginPath();
-  ctx.arc(W - 34, 142, 10, 0, Math.PI * 2);
+  ctx.arc(W - 34, 166, 9, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
+  void random;
 
   const texture = new CanvasTexture(el);
   texture.colorSpace = SRGBColorSpace;
@@ -207,23 +250,39 @@ export function adTexture(variant: number): Texture {
 
 const stripCache = new Map<number, Texture>();
 
-/** A vertical sign: glyphs stacked down a narrow column. */
+/**
+ * A vertical sign, characters stacked down the column.
+ *
+ * Which is how these are actually written and hung, and it is the reason a
+ * Chinese street reads as vertical stripes of light from a distance — the
+ * thing pseudo-glyph bars could never produce.
+ */
 export function signStripTexture(variant: number): Texture {
   const cached = stripCache.get(variant);
   if (cached) return cached;
 
-  const random = seeded(0x51600 + variant);
   const [ink, ground] = AD_SCHEMES[(variant + 2) % AD_SCHEMES.length];
-  const W = 48;
-  const H = 256;
+  const text = VERTICAL_SIGNS[variant % VERTICAL_SIGNS.length];
+  const CELL = 54;
+  const W = 64;
+  const H = Math.max(256, text.length * CELL + 24);
   const [el, ctx] = canvas(W, H);
 
   ctx.fillStyle = ground;
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = ink;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
-  drawGlyphs(ctx, 8, 10, W - 16, H - 20, 32, ink, random);
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, W - 4, H - 4);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = ink;
+  ctx.font = `${CELL - 12}px ${CJK}`;
+  [...text].forEach((char, i) => {
+    ctx.fillText(char, W / 2, 20 + i * CELL + CELL / 2);
+  });
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
 
   const texture = new CanvasTexture(el);
   texture.colorSpace = SRGBColorSpace;
@@ -314,12 +373,17 @@ export function holoAdTexture(): Texture {
   ctx.fillStyle = "rgba(255, 46, 136, 0.9)";
   ctx.fillRect(22, 132, W - 44, 34);
 
-  // a block of pseudo-text under it
-  ctx.fillStyle = "rgba(0, 229, 255, 0.7)";
-  for (let row = 0; row < 7; row++) {
-    const w = 70 + ((row * 53) % 120);
-    ctx.fillRect((W - w) / 2, 268 + row * 15, w, 7);
-  }
+  // the sponsor, under the mark
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(0, 229, 255, 0.92)";
+  ctx.font = `46px ${CJK}`;
+  ctx.fillText("加密貨幣交易所", W / 2, 292);
+  ctx.fillStyle = "rgba(255, 46, 136, 0.8)";
+  ctx.font = `30px ${CJK}`;
+  ctx.fillText("夜之城 · 二十四小時", W / 2, 342);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
 
   // scanlines — the tell that it is projected
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
