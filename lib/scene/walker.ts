@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { DOOR_Z } from "./stairs";
 
 /**
  * The supervisor's pose, and the keys pushing it around.
@@ -15,7 +16,7 @@ export const walker = {
   /** Where they are standing. `y` is absolute height, not an offset. */
   x: 3.2,
   y: 0,
-  z: 2.6,
+  z: DOOR_Z,
   /**
    * The storey the current flight pair hangs from. Equal to `y` whenever they
    * are standing in a room; see `heightAt` for why it is carried separately.
@@ -37,15 +38,16 @@ export const walkInput = {
  * Stands them on a storey, facing into the room.
  *
  * Off to one side rather than dead centre, so the camera behind them frames
- * the room rather than the back of their head, and far enough forward that
- * the boom has somewhere to be. Facing −z, which is where every storey keeps
- * the thing worth looking at: the window upstairs, the screen below.
+ * the room rather than the back of their head, and already lined up with the
+ * door to the stair — from here, walking right goes downstairs. Facing −z,
+ * which is where every storey keeps the thing worth looking at: the window
+ * upstairs, the screen below.
  */
 export function placeOnStorey(level: number) {
   walker.level = level;
   walker.y = level;
   walker.x = 3.2;
-  walker.z = 2.6;
+  walker.z = DOOR_Z;
   walker.facing = Math.PI;
 }
 

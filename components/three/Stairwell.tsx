@@ -129,6 +129,27 @@ export function Stairwell({ level, accent = "#00e5ff" }: { level: number; accent
         <meshStandardMaterial color={METAL} metalness={0.62} roughness={0.55} />
       </mesh>
 
+      {/* Which way is on.
+          A switchback turns you through a hundred and eighty degrees, and a
+          camera following you round the turn is looking back up the flight
+          you just came down — so at exactly the two points where you have to
+          choose, the way on is off screen. A mark on each landing points at
+          the next flight. */}
+      <mesh
+        position={[SHAFT_X0 + doorLanding / 2, level + 0.02, LANE_A]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <circleGeometry args={[0.42, 3]} />
+        <meshBasicMaterial color={accent} toneMapped={false} />
+      </mesh>
+      <mesh
+        position={[SHAFT_X1 - farLanding / 2, half + 0.02, LANE_B]}
+        rotation={[-Math.PI / 2, 0, Math.PI]}
+      >
+        <circleGeometry args={[0.42, 3]} />
+        <meshBasicMaterial color={accent} toneMapped={false} />
+      </mesh>
+
       {/* --- treads --- */}
       {treads.map((tread) => (
         <group key={`${tread.z}:${tread.y.toFixed(3)}`}>

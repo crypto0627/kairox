@@ -19,11 +19,13 @@ import { walker, walkInput } from "@/lib/scene/walker";
 import {
   DOOR_HALF_W,
   DOOR_Z,
+  RUN_X0,
   SHAFT_Z0 as SHAFT_Z_BACK,
   SHAFT_X0,
   SHAFT_X1,
   SHAFT_Z0,
   SHAFT_Z1,
+  flightExists,
   heightAt,
   inShaft,
   rebase,
@@ -191,12 +193,18 @@ export function Supervisor() {
 
     if (moving) {
       const speed = (WALK_SPEED * delta) / push;
-      const [x, z] = settle(
+      const [stepped, z] = settle(
         walker.x,
         walker.x + ax * speed,
         walker.z + az * speed,
         walker.level === 0,
       );
+      // Leaving the landing onto a flight the building does not have — above
+      // the top storey, below the bottom one — is a wall, not a fall.
+      const x =
+        walker.x <= RUN_X0 && stepped > RUN_X0 && !flightExists(walker.level, z)
+          ? RUN_X0
+          : stepped;
       walker.level = rebase(walker.level, z, walker.x, x);
       walker.x = x;
       walker.z = z;

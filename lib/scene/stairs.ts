@@ -1,4 +1,4 @@
-import { STOREY } from "./floors";
+import { FLOORS, STOREY } from "./floors";
 
 /**
  * The stair core.
@@ -42,11 +42,36 @@ export const STEPS_PER_FLIGHT = 20;
 export const STEP_RISE = FLIGHT_RISE / STEPS_PER_FLIGHT;
 export const STEP_RUN = (RUN_X1 - RUN_X0) / STEPS_PER_FLIGHT;
 
-/** The door between a cellular storey and the shaft, in the middle of the
- *  right-hand wall. */
-export const DOOR_Z = 0;
+/**
+ * The door between a cellular storey and the shaft.
+ *
+ * It opens at the head of the *descending* flight, not on the line between
+ * the two. Centred on the split, walking straight out and carrying on put you
+ * on the returning flight, which goes up — so the obvious move took you the
+ * wrong way, and from the top floor it took you onto a flight that does not
+ * exist. Straight ahead is now down; up is a step to the right.
+ */
+export const DOOR_Z = LANE_A;
 export const DOOR_HALF_W = 1.1;
 export const DOOR_HEIGHT = 3.2;
+
+/** The storeys the stair actually joins. Above the first and below the last
+ *  there is no building, so there is no flight. */
+const TOP_LEVEL = FLOORS[0].level;
+const BOTTOM_LEVEL = FLOORS[FLOORS.length - 1].level;
+
+/**
+ * Whether the flight leading out of this landing exists.
+ *
+ * A storey's stairwell spans from its own level down to the next, so the
+ * bottom floor has nothing below it to descend to and the top floor nothing
+ * above it to climb. Without this the supervisor walks out onto treads that
+ * were never built and ends up standing in the air outside the building —
+ * which is what "the stairs don't reach a floor" looks like from inside.
+ */
+export function flightExists(level: number, z: number): boolean {
+  return z >= LANE_SPLIT ? level < TOP_LEVEL : level > BOTTOM_LEVEL;
+}
 
 export function inShaft(x: number, z: number): boolean {
   return x > SHAFT_X0 && x < SHAFT_X1 && z > SHAFT_Z0 && z < SHAFT_Z1;
