@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
-import { usePathname } from "next/navigation";
 import {
   AnimationClip,
   AnimationMixer,
@@ -16,6 +15,19 @@ import {
 } from "three";
 import { SkeletonUtils } from "three-stdlib";
 import { step, usePrefersReducedMotion } from "@/lib/three/environment";
+import { walker, walkInput } from "@/lib/scene/walker";
+import {
+  DOOR_HALF_W,
+  DOOR_Z,
+  SHAFT_Z0 as SHAFT_Z_BACK,
+  SHAFT_X0,
+  SHAFT_X1,
+  SHAFT_Z0,
+  SHAFT_Z1,
+  heightAt,
+  inShaft,
+  rebase,
+} from "@/lib/scene/stairs";
 
 const MODEL = "/models/robot-trader.glb";
 
@@ -26,30 +38,14 @@ const FRAME = new Color("#1b2330");
 const VISOR = new Color("#00e5ff");
 
 const SCALE = 0.44;
-/**
- * The walkway behind the desks.
- *
- * In front of them it worked out three units from the camera and filled the
- * middle of the frame, blocking the trader it was meant to be supervising.
- * Behind, the traders partly occlude it, which is what walking a floor looks
- * like.
- */
-const LANE_Z = -3.8;
-const PATROL_X = 8.6;
+const WALK_SPEED = 3.4;
+const TURN_RATE = 9;
 
-/**
- * Where it stands to deliver the report — the right-hand end of its own lane.
- *
- * Not the front and centre it deserves: /report puts an opaque panel across
- * the middle of the screen and the sidebar owns the left, so the only place it
- * can be seen from while you read is the gap on the right. Standing a little
- * forward of its lane there makes it large enough to register.
- */
-const PODIUM = new Vector3(9.8, 0, -1.2);
-
-const WALK_SPEED = 1.5;
-const TURN_RATE = 3.2;
-const ARRIVED = 0.25;
+/** How far out into a room they may walk before a wall stops them. */
+const ROOM_X = -11;
+const ROOM_Z0 = -9;
+const ROOM_Z1 = 8;
+const MARGIN = 0.3;
 
 interface Rig {
   mixer: AnimationMixer;
@@ -65,26 +61,60 @@ function angleDelta(from: number, to: number): number {
   return delta;
 }
 
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
 /**
- * The floor supervisor.
+ * Where a step is allowed to land.
  *
- * It walks the line while the desks work, and on /report it comes to the front
- * and turns to face you — which is the whole reason the report is a place in a
- * room rather than a page. It is the same CC0 rig as the traders, re-liveried,
- * using the Walking clip that has been sitting unused since the GLTF landed.
+ * The room and the shaft are two boxes that meet only at the door in the
+ * middle of the right-hand wall. Each axis is clamped on its own so that
+ * walking into a wall slides along it rather than stopping dead, which is
+ * most of the difference between a character and a cursor.
+ */
+function settle(fromX: number, x: number, z: number, openPlan: boolean): [number, number] {
+  // The trading floor has no wall between it and the stair core, so its whole
+  // mouth is a way in. The storeys below are cellular and have a door.
+  const doorway = openPlan
+    ? z > SHAFT_Z_BACK + MARGIN && z < SHAFT_Z1 - MARGIN
+    : Math.abs(z - DOOR_Z) < DOOR_HALF_W - 0.2;
+
+  if (fromX > SHAFT_X0) {
+    // In the shaft: its own walls, and a way back only through the door.
+    const minX = doorway ? ROOM_X : SHAFT_X0 + MARGIN;
+    const inside = x > SHAFT_X0;
+    return [
+      clamp(x, minX, SHAFT_X1 - MARGIN),
+      inside
+        ? clamp(z, SHAFT_Z0 + MARGIN, SHAFT_Z1 - MARGIN)
+        : clamp(z, ROOM_Z0, ROOM_Z1),
+    ];
+  }
+
+  // In a room: the shaft wall is solid except at the door.
+  const maxX = doorway ? SHAFT_X1 - MARGIN : SHAFT_X0 - MARGIN;
+  return [clamp(x, ROOM_X, maxX), clamp(z, ROOM_Z0, ROOM_Z1)];
+}
+
+/**
+ * The floor supervisor — and, since the building got a stair, the one you
+ * drive.
+ *
+ * Arrow keys and WASD walk them around the storey they are on; walking into
+ * the stair core and down a flight is what changes floor. Their height is
+ * read off the stair rather than animated, so the model is genuinely on the
+ * treads and the camera that follows them genuinely descends.
  *
  * Driven imperatively for the same reason as everything else on this floor:
  * position and animation state are external, and nothing here should cost a
  * React render per frame.
  */
 export function Supervisor() {
-  const pathname = usePathname();
   const stillness = usePrefersReducedMotion();
   const host = useRef<Group>(null);
   const rig = useRef<Rig | null>(null);
-  const heading = useRef(1);
-  const facing = useRef(Math.PI / 2);
-  const walking = useRef(true);
+  const walking = useRef(false);
+  const aim = useRef(new Vector3());
+  const { camera } = useThree();
   const { scene, animations } = useGLTF(MODEL);
 
   useEffect(() => {
@@ -113,7 +143,6 @@ export function Supervisor() {
     });
 
     parent.add(model);
-    parent.position.set(-PATROL_X, 0, LANE_Z);
 
     const mixer = new AnimationMixer(model);
     const find = (name: string) => {
@@ -122,7 +151,7 @@ export function Supervisor() {
     };
     const walk = find("Walking");
     const idle = find("Idle");
-    walk?.play();
+    idle?.play();
 
     rig.current = { mixer, walk, idle };
 
@@ -142,46 +171,76 @@ export function Supervisor() {
 
     const delta = step(rawDelta);
 
-    // Standing still is a legitimate thing for a supervisor to do, and it is
-    // what someone who asked for less motion should see.
-    const presenting = stillness || pathname === "/report";
+    // Which way is forward depends on where you are standing, not on the
+    // world axes — otherwise walking "up" sends them sideways the moment you
+    // orbit the camera.
+    aim.current.set(camera.position.x - walker.x, 0, camera.position.z - walker.z);
+    if (aim.current.lengthSq() < 1e-6) aim.current.set(0, 0, 1);
+    aim.current.normalize();
 
-    // Where it is trying to be. On the report page that is the podium; the
-    // rest of the time it is the far end of whichever way it was already
-    // walking.
-    const targetX = presenting ? PODIUM.x : heading.current * PATROL_X;
-    const targetZ = presenting ? PODIUM.z : LANE_Z;
+    let ax = 0;
+    let az = 0;
+    if (walkInput.forward) { ax -= aim.current.x; az -= aim.current.z; }
+    if (walkInput.back)    { ax += aim.current.x; az += aim.current.z; }
+    // Left and right are the forward vector turned a quarter turn.
+    if (walkInput.left)    { ax -= aim.current.z; az += aim.current.x; }
+    if (walkInput.right)   { ax += aim.current.z; az -= aim.current.x; }
 
-    const dx = targetX - node.position.x;
-    const dz = targetZ - node.position.z;
-    const distance = Math.hypot(dx, dz);
+    const push = Math.hypot(ax, az);
+    const moving = push > 0.001 && !stillness;
 
-    if (distance > ARRIVED) {
-      const step = Math.min(distance, WALK_SPEED * delta);
-      node.position.x += (dx / distance) * step;
-      node.position.z += (dz / distance) * step;
-      facing.current += angleDelta(facing.current, Math.atan2(dx, dz)) *
+    if (moving) {
+      const speed = (WALK_SPEED * delta) / push;
+      const [x, z] = settle(
+        walker.x,
+        walker.x + ax * speed,
+        walker.z + az * speed,
+        walker.level === 0,
+      );
+      walker.level = rebase(walker.level, z, walker.x, x);
+      walker.x = x;
+      walker.z = z;
+      walker.facing += angleDelta(walker.facing, Math.atan2(ax, az)) *
         Math.min(1, TURN_RATE * delta);
-      if (!walking.current) {
-        walking.current = true;
-        current.idle?.fadeOut(0.3);
-        current.walk?.reset().fadeIn(0.3).play();
-      }
-    } else if (presenting) {
-      // Arrived at the podium: turn to the camera and stand.
-      facing.current += angleDelta(facing.current, 0) * Math.min(1, TURN_RATE * delta);
-      if (walking.current) {
-        walking.current = false;
-        current.walk?.fadeOut(0.35);
-        current.idle?.reset().fadeIn(0.35).play();
-      }
-    } else {
-      heading.current *= -1;
     }
 
-    node.rotation.y = facing.current;
+    // Height is read off the stair, never animated: the model stands on the
+    // treads because it is standing on the same function they were built from.
+    walker.y = inShaft(walker.x, walker.z)
+      ? heightAt(walker.level, walker.x, walker.z)
+      : walker.level;
+    walker.moving = moving;
+
+    node.position.set(walker.x, walker.y, walker.z);
+    node.rotation.y = walker.facing;
+
+    if (moving !== walking.current) {
+      walking.current = moving;
+      if (moving) {
+        current.idle?.fadeOut(0.18);
+        current.walk?.reset().fadeIn(0.18).play();
+      } else {
+        current.walk?.fadeOut(0.24);
+        current.idle?.reset().fadeIn(0.24).play();
+      }
+    }
+
     current.mixer.update(delta);
   });
 
-  return <group ref={host} scale={SCALE} />;
+  return (
+    <group ref={host} scale={SCALE}>
+      {/* A lamp they carry. The stair core has no windows and no signage, so
+          without this the only lit thing on a flight is the nosing strip and
+          you descend by feel. Scaled with the model, so the numbers here are
+          in robot units. */}
+      <pointLight
+        position={[0, 2.4, 4.6]}
+        intensity={22}
+        distance={30}
+        decay={2}
+        color="#bfe9ff"
+      />
+    </group>
+  );
 }

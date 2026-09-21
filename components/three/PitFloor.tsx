@@ -1,6 +1,7 @@
 "use client";
 
 import { DepthCanyon } from "./DepthCanyon";
+import { StairDoorWall } from "./StairDoorWall";
 import { IntelWall } from "./IntelWall";
 import { STOREY } from "@/lib/scene/floors";
 
@@ -148,24 +149,24 @@ export function PitFloor() {
         <planeGeometry args={[HALF_W * 2, CEILING]} />
         <meshStandardMaterial color="#080c14" metalness={0.4} roughness={0.86} />
       </mesh>
-      {[-1, 1].map((side) => (
-        <group key={side}>
-          <mesh
-            position={[side * HALF_W, CEILING / 2, midZ]}
-            rotation={[0, (-side * Math.PI) / 2, 0]}
-          >
-            <planeGeometry args={[FRONT_Z - BACK_Z, CEILING]} />
-            <meshStandardMaterial color="#080c14" metalness={0.35} roughness={0.88} />
-          </mesh>
-          <mesh
-            position={[side * (HALF_W - 0.03), 1.3, midZ]}
-            rotation={[0, (-side * Math.PI) / 2, 0]}
-          >
-            <planeGeometry args={[FRONT_Z - BACK_Z, 0.03]} />
-            <meshBasicMaterial color="#8b5cf6" toneMapped={false} />
-          </mesh>
-        </group>
-      ))}
+      {/* the left wall is solid; the right one has the door to the stair */}
+      <group>
+        <mesh position={[-HALF_W, CEILING / 2, midZ]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[FRONT_Z - BACK_Z, CEILING]} />
+          <meshStandardMaterial color="#080c14" metalness={0.35} roughness={0.88} />
+        </mesh>
+        <mesh position={[-(HALF_W - 0.03), 1.3, midZ]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[FRONT_Z - BACK_Z, 0.03]} />
+          <meshBasicMaterial color="#8b5cf6" toneMapped={false} />
+        </mesh>
+      </group>
+      <StairDoorWall
+        x={HALF_W}
+        back={BACK_Z}
+        front={FRONT_Z}
+        ceiling={CEILING}
+        accent="#8b5cf6"
+      />
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, CEILING, midZ]}>
         <planeGeometry args={[HALF_W * 2, FRONT_Z - BACK_Z]} />
         <meshStandardMaterial color="#06090f" metalness={0.3} roughness={0.92} />

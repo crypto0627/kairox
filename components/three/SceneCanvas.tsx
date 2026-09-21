@@ -7,11 +7,12 @@ import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { useMarketFeed } from "@/lib/market/useMarketFeed";
 import { useIsVisible } from "@/lib/three/environment";
-import { useFloorKeys } from "@/lib/scene/useFloorKeys";
+import { useWalkKeys } from "@/lib/scene/walker";
 import { floorFor } from "@/lib/scene/floors";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SceneBoundary } from "./SceneBoundary";
+import { WalkHint } from "@/components/ui/WalkHint";
 import { useVerdictScoring } from "@/lib/agent/useAgentFloor";
 
 const Scene = dynamic(() => import("./Scene").then((m) => m.Scene), {
@@ -28,8 +29,8 @@ export function SceneCanvas({ children }: { children?: ReactNode }) {
   useMarketFeed();
   // Agents only speak when asked; this just grades what they said.
   useVerdictScoring();
-  // Up and down ride the lift.
-  useFloorKeys();
+  // The arrow keys walk the supervisor; the stairs are what change floor.
+  useWalkKeys();
 
   // A hidden tab has no reason to render rain. The sockets stay open and the
   // store keeps filling — only the draw loop stops — so switching back shows
@@ -68,6 +69,8 @@ export function SceneCanvas({ children }: { children?: ReactNode }) {
       </Canvas>
       </SceneBoundary>
     </div>
+
+    <WalkHint />
 
     {/* On a screen floor the page lives on the wall; everywhere else it is
         chrome over the room. z-10 either way. */}

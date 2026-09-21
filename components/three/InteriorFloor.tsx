@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { RepeatWrapping } from "three";
+import { StairDoorWall } from "./StairDoorWall";
 import { mulberry32 } from "@/lib/three/random";
 import { floorGridTexture, hazardStripeTexture } from "@/lib/three/textures";
 
@@ -16,6 +17,7 @@ const DEPTH_FRONT = 9;
  * atrium storey anyway.
  */
 const CEILING = 6.4;
+
 
 const METAL = "#0c121b";
 const METAL_DARK = "#070b11";
@@ -74,25 +76,31 @@ export function InteriorFloor({ level, accent, dressing }: Props) {
         <meshStandardMaterial color="#080c14" metalness={0.35} roughness={0.88} />
       </mesh>
 
-      {/* side walls, each with a light run at waist height */}
-      {[-1, 1].map((side) => (
-        <group key={side}>
-          <mesh
-            position={[side * HALF_W, CEILING / 2, midZ]}
-            rotation={[0, (-side * Math.PI) / 2, 0]}
-          >
-            <planeGeometry args={[DEPTH_FRONT - DEPTH_BACK, CEILING]} />
-            <meshStandardMaterial color="#080c14" metalness={0.35} roughness={0.88} />
-          </mesh>
-          <mesh
-            position={[side * (HALF_W - 0.03), 1.15, midZ]}
-            rotation={[0, (-side * Math.PI) / 2, 0]}
-          >
-            <planeGeometry args={[DEPTH_FRONT - DEPTH_BACK, 0.03]} />
-            <meshBasicMaterial color={accent} toneMapped={false} />
-          </mesh>
-        </group>
-      ))}
+      {/* The left wall is solid; the right one has the door to the stair cut
+          out of it, so it is built as two panels and a header rather than one
+          plane. The gap is a little wider than the slot you can actually walk
+          through, so you never scrape the frame on the way out. */}
+      <group>
+        <mesh
+          position={[-HALF_W, CEILING / 2, midZ]}
+          rotation={[0, Math.PI / 2, 0]}
+        >
+          <planeGeometry args={[DEPTH_FRONT - DEPTH_BACK, CEILING]} />
+          <meshStandardMaterial color="#080c14" metalness={0.35} roughness={0.88} />
+        </mesh>
+        <mesh position={[-(HALF_W - 0.03), 1.15, midZ]} rotation={[0, Math.PI / 2, 0]}>
+          <planeGeometry args={[DEPTH_FRONT - DEPTH_BACK, 0.03]} />
+          <meshBasicMaterial color={accent} toneMapped={false} />
+        </mesh>
+      </group>
+
+      <StairDoorWall
+        x={HALF_W}
+        back={DEPTH_BACK}
+        front={DEPTH_FRONT}
+        ceiling={CEILING}
+        accent={accent}
+      />
 
       {/* ceiling and its battens */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, CEILING, midZ]}>

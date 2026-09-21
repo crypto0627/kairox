@@ -41,8 +41,17 @@ export interface Floor {
   screen?: [number, number, number];
 }
 
-/** Storey height. Enough that floors never see each other. */
-export const STOREY = 18;
+/**
+ * Storey height.
+ *
+ * Set by the tallest room rather than picked: the Pit's ceiling is 9.2, so
+ * twelve leaves it a slab of 2.8 and the cellular storeys below a deeper one.
+ * It used to be eighteen, chosen only so that floors could never see each
+ * other — which stopped being the goal once a stair had to join them. A
+ * flight now climbs six, two flights make a storey, and the shaft is a room
+ * you can be inside rather than a number.
+ */
+export const STOREY = 12;
 
 /**
  * Top to bottom, matching the sidebar. Index is the floor number counting
@@ -56,8 +65,8 @@ export const FLOORS: Floor[] = [
     level: 0,
     camera: new Vector3(0, 3.2, 11),
     target: new Vector3(0, 2.4, 0),
-    minDistance: 8,
-    maxDistance: 15,
+    minDistance: 3.2,
+    maxDistance: 11,
   },
   {
     id: "pit",
@@ -74,8 +83,8 @@ export const FLOORS: Floor[] = [
      */
     camera: new Vector3(0, 2.05 - STOREY, 8.2),
     target: new Vector3(0, 2.9 - STOREY, -3.5),
-    minDistance: 5,
-    maxDistance: 18,
+    minDistance: 3.2,
+    maxDistance: 11,
   },
   {
     id: "briefing",
@@ -84,8 +93,8 @@ export const FLOORS: Floor[] = [
     level: -STOREY * 2,
     camera: new Vector3(0, -STOREY * 2 + 2.4, 3.8),
     target: new Vector3(0, -STOREY * 2 + 3.1, -4),
-    minDistance: 3,
-    maxDistance: 14,
+    minDistance: 3.2,
+    maxDistance: 11,
     screen: [0, -STOREY * 2 + 3.1, -9.9],
   },
   {
@@ -95,8 +104,8 @@ export const FLOORS: Floor[] = [
     level: -STOREY * 3,
     camera: new Vector3(0, -STOREY * 3 + 2.4, 3.8),
     target: new Vector3(0, -STOREY * 3 + 3.1, -4),
-    minDistance: 3,
-    maxDistance: 14,
+    minDistance: 3.2,
+    maxDistance: 11,
     screen: [0, -STOREY * 3 + 3.1, -9.9],
   },
   {
@@ -106,8 +115,8 @@ export const FLOORS: Floor[] = [
     level: -STOREY * 4,
     camera: new Vector3(0, -STOREY * 4 + 2.4, 3.8),
     target: new Vector3(0, -STOREY * 4 + 3.1, -4),
-    minDistance: 3,
-    maxDistance: 14,
+    minDistance: 3.2,
+    maxDistance: 11,
     screen: [0, -STOREY * 4 + 3.1, -9.9],
   },
 ];
