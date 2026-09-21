@@ -1,3 +1,4 @@
+import { ScreenDoc } from "@/components/ui/ScreenDoc";
 import { AgentScoreboard } from "@/components/ui/AgentScoreboard";
 import { ScoreRefresh } from "@/components/ui/ScoreRefresh";
 import { VerdictLog } from "@/components/ui/VerdictLog";
@@ -26,17 +27,7 @@ export default async function HistoryPage() {
   }
 
   return (
-    <div className="pointer-events-auto h-full overflow-y-auto py-8 pr-8 pl-72 pb-28">
-      {/* The scene stays visible behind this, but only just. A page of text
-          floating at 3% opacity over candlesticks and five lit robots is
-          unreadable — the console has to be a surface, not a suggestion. */}
-      <div
-        className={[
-          "mx-auto max-w-5xl rounded-2xl border border-white/10 p-8",
-          "bg-void/85 backdrop-blur-2xl ring-1 ring-neon-cyan/10 ring-inset",
-          "shadow-[0_0_90px_-35px_rgba(0,229,255,0.55)]",
-        ].join(" ")}
-      >
+    <ScreenDoc>
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] tracking-[0.35em] text-neon-magenta uppercase">
@@ -83,7 +74,6 @@ export default async function HistoryPage() {
             </section>
           </>
         )}
-      </div>
-    </div>
+    </ScreenDoc>
   );
 }

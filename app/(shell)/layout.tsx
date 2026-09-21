@@ -17,14 +17,10 @@ export default function ShellLayout({ children }: { children: ReactNode }) {
   return (
     <AudioProvider src="/audio/synthwave-house-loop">
       <div className="relative h-dvh w-dvw overflow-hidden bg-void">
-        {/* z-0 — the 3D room */}
-        <SceneCanvas />
-
-        {/* z-10 — page content, transparent to pointer events so the
-            camera can be dragged from anywhere on screen */}
-        <main className="pointer-events-none absolute inset-0 z-10">
-          {children}
-        </main>
+        {/* z-0 — the 3D room, and the page with it.
+            The canvas decides where the page goes: storeys with a display
+            wall show it on that screen, the rest float it over the room. */}
+        <SceneCanvas>{children}</SceneCanvas>
 
         {/* z-20 — navigation */}
         <Sidebar />

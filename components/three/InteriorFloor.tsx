@@ -10,8 +10,12 @@ export type Dressing = "briefing" | "archive" | "ops";
 const HALF_W = 12;
 const DEPTH_BACK = -10;
 const DEPTH_FRONT = 9;
-/** Human scale: a corporate storey, not a hangar. The camera stands at 2.1. */
-const CEILING = 4.2;
+/**
+ * Tall enough for the display wall. A 5.6-unit screen hung at eye level does
+ * not fit under a 4.2 ceiling, and a floor with a wall of screens is an
+ * atrium storey anyway.
+ */
+const CEILING = 6.4;
 
 const METAL = "#0c121b";
 const METAL_DARK = "#070b11";
@@ -95,7 +99,7 @@ export function InteriorFloor({ level, accent, dressing }: Props) {
         <planeGeometry args={[HALF_W * 2, DEPTH_FRONT - DEPTH_BACK]} />
         <meshStandardMaterial color="#06090f" metalness={0.3} roughness={0.92} />
       </mesh>
-      {[-7.5, -3.5, 0.5, 4.5].map((z) => (
+      {[-6.5, -2.5, 1.5, 5.5].map((z) => (
         <mesh key={z} rotation={[Math.PI / 2, 0, 0]} position={[0, CEILING - 0.02, z]}>
           <planeGeometry args={[HALF_W * 1.5, 0.1]} />
           <meshBasicMaterial color="#0b6f80" toneMapped={false} />

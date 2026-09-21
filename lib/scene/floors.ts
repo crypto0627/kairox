@@ -32,6 +32,13 @@ export interface Floor {
    */
   minDistance: number;
   maxDistance: number;
+  /**
+   * Where this storey's page is shown on a screen in the room rather than on
+   * a panel floating over it. Undefined means the page renders as a DOM
+   * overlay, which is right for the dashboard's ticker and the Pit's caption
+   * — those are chrome, not a document.
+   */
+  screen?: [number, number, number];
 }
 
 /** Storey height. Enough that floors never see each other. */
@@ -75,30 +82,33 @@ export const FLOORS: Floor[] = [
     path: "/report",
     label: "Briefing",
     level: -STOREY * 2,
-    camera: new Vector3(-1.6, -STOREY * 2 + 2.1, 7.2),
-    target: new Vector3(0, -STOREY * 2 + 2.3, -2),
-    minDistance: 4,
+    camera: new Vector3(0, -STOREY * 2 + 2.4, 3.8),
+    target: new Vector3(0, -STOREY * 2 + 3.1, -4),
+    minDistance: 3,
     maxDistance: 14,
+    screen: [0, -STOREY * 2 + 3.1, -9.9],
   },
   {
     id: "archive",
     path: "/history",
     label: "Archive",
     level: -STOREY * 3,
-    camera: new Vector3(-1.6, -STOREY * 3 + 2.1, 7.2),
-    target: new Vector3(0, -STOREY * 3 + 2.2, -2),
-    minDistance: 4,
+    camera: new Vector3(0, -STOREY * 3 + 2.4, 3.8),
+    target: new Vector3(0, -STOREY * 3 + 3.1, -4),
+    minDistance: 3,
     maxDistance: 14,
+    screen: [0, -STOREY * 3 + 3.1, -9.9],
   },
   {
     id: "ops",
     path: "/profile",
     label: "Ops",
     level: -STOREY * 4,
-    camera: new Vector3(-1.6, -STOREY * 4 + 2.1, 7.2),
-    target: new Vector3(0, -STOREY * 4 + 2.2, -2),
-    minDistance: 4,
+    camera: new Vector3(0, -STOREY * 4 + 2.4, 3.8),
+    target: new Vector3(0, -STOREY * 4 + 3.1, -4),
+    minDistance: 3,
     maxDistance: 14,
+    screen: [0, -STOREY * 4 + 3.1, -9.9],
   },
 ];
 

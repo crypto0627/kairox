@@ -30,6 +30,8 @@ import { useMarketStore } from "@/lib/store/marketStore";
 import { SYMBOLS } from "@/lib/market/symbols";
 import { floorFor, STOREY } from "@/lib/scene/floors";
 import type { Dressing } from "./InteriorFloor";
+import { WallScreen } from "./WallScreen";
+import type { WallScreenProps } from "./WallScreen";
 
 /** The storeys below the Pit, and how each one is dressed. */
 const LOWER_FLOORS: Array<{
@@ -54,7 +56,7 @@ const SEATS = SYMBOLS.map((spec, i) => {
   };
 });
 
-export function Scene() {
+export function Scene({ screenSlot }: { screenSlot?: WallScreenProps["slot"] }) {
   const pathname = usePathname();
   // Read during render so OrbitControls gets the storey's own limits; the
   // position lerp stays in useFrame.
@@ -93,6 +95,18 @@ export function Scene() {
     const ease = 1 - Math.pow(0.001, delta);
     camera.position.lerp(target.current, ease);
     controls.current?.target.lerp(lookAt.current, ease);
+
+    // Geometric easing approaches but never arrives. Left alone the camera
+    // writes a sub-pixel different matrix every frame forever — which on a
+    // storey whose wall is a document means the text never quite stops
+    // drifting under the cursor. Within a ten-thousandth of a unit, arrive.
+    if (camera.position.distanceToSquared(target.current) < 1e-8) {
+      camera.position.copy(target.current);
+    }
+    const orbit = controls.current;
+    if (orbit && orbit.target.distanceToSquared(lookAt.current) < 1e-8) {
+      orbit.target.copy(lookAt.current);
+    }
   });
 
   return (
@@ -180,6 +194,11 @@ export function Scene() {
           rotation={seat.rotation}
         />
       ))}
+
+      {/* The page, on the wall, where the storey has a screen for it. */}
+      {floor.screen && screenSlot && (
+        <WallScreen position={floor.screen} slot={screenSlot} />
+      )}
 
       <CursorMagic />
 

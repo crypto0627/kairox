@@ -1,3 +1,4 @@
+import { ScreenDoc } from "@/components/ui/ScreenDoc";
 import {
   FloorSettingsForm,
   type Settings,
@@ -41,14 +42,7 @@ export default async function ProfilePage() {
   const settings = await load();
 
   return (
-    <div className="pointer-events-auto h-full overflow-y-auto py-8 pr-8 pl-72 pb-28">
-      <div
-        className={[
-          "mx-auto max-w-4xl rounded-2xl border border-white/10 p-8",
-          "bg-void/85 backdrop-blur-2xl ring-1 ring-neon-cyan/10 ring-inset",
-          "shadow-[0_0_90px_-35px_rgba(0,229,255,0.55)]",
-        ].join(" ")}
-      >
+    <ScreenDoc>
         <p className="font-mono text-[10px] tracking-[0.35em] text-neon-magenta uppercase">
           Agent Floor
         </p>
@@ -65,7 +59,6 @@ export default async function ProfilePage() {
         </p>
 
         <FloorSettingsForm initial={settings} />
-      </div>
-    </div>
+    </ScreenDoc>
   );
 }

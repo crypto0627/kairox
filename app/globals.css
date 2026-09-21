@@ -65,3 +65,34 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * The document shown on a wall screen inside the scene.
+ *
+ * Sized in CSS pixels because that is what drei's transform mode maps into
+ * world units; the height is fixed so the content scrolls inside the screen
+ * rather than growing the screen.
+ */
+.kairox-screen {
+  /* The scroll container is also the offset parent, so a control's position
+     inside the document can be measured in layout pixels — the projected
+     ones are scaled by the camera. */
+  position: relative;
+  width: 1000px;
+  height: 560px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, rgb(9 16 30 / 0.97), rgb(5 8 15 / 0.97));
+  color: var(--color-hud);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(0 229 255 / 0.4) transparent;
+  overscroll-behavior: contain;
+}
+
+.kairox-screen::-webkit-scrollbar {
+  width: 10px;
+}
+.kairox-screen::-webkit-scrollbar-thumb {
+  background: rgb(0 229 255 / 0.35);
+  border-radius: 5px;
+}
